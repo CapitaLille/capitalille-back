@@ -14,8 +14,8 @@ export class CreateAuthDto {
   lobbys: string[];
 
   @ApiProperty()
-  coffees: number;
+  credit: number;
 
   @ApiProperty()
-  picture: string;
+  pp: string;
 }

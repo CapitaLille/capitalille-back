@@ -6,6 +6,7 @@ import { UserModule } from './user/user.module';
 import { Mongoose } from 'mongoose';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
+import { LobbyModule } from './lobby/lobby.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ConfigModule } from '@nestjs/config';
       cache: true,
     }),
     MongooseModule.forRoot(process.env.MONGODB_URL),
+    LobbyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

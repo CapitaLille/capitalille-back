@@ -19,7 +19,6 @@ import { bcryptConstants, jwtConstants } from 'src/user/constants';
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
     private jwt: JwtService,
     @InjectModel('User') private readonly userModel: Model<User>,
   ) {}
@@ -29,7 +28,7 @@ export class AuthService {
       email: createAuthDto.email,
     });
     if (foundUser) {
-      throw new BadRequestException('Ce mail est déjà utilisé.');
+      throw new BadRequestException('Mail already used');
     }
 
     createAuthDto.password = await bcrypt.hash(
@@ -45,11 +44,11 @@ export class AuthService {
   async login(data: { email: string; password: string }) {
     const foundUser = await this.userModel.findOne({ email: data.email });
     if (!foundUser) {
-      throw new NotFoundException('Aucun utilisateur avec cet adresse mail.');
+      throw new NotFoundException('User not found');
     }
     const valid = await bcrypt.compare(data.password, foundUser?.password);
     if (!valid) {
-      throw new HttpException('Mot de passe incorrect', HttpStatus.FORBIDDEN);
+      throw new HttpException('Wrong password', HttpStatus.FORBIDDEN);
     } else {
       return await this.generateTokens(foundUser);
     }
@@ -62,7 +61,7 @@ export class AuthService {
         secret: jwtConstants.secret,
       });
     } catch {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Invalid token');
     }
 
     const foundUser = await this.userModel.findOne({ email: user.data.email });
@@ -72,7 +71,7 @@ export class AuthService {
         _id: foundUser._id.toString(),
       });
     } else {
-      return new UnauthorizedException();
+      throw new UnauthorizedException("Can't generate token");
     }
   }
 
@@ -80,20 +79,24 @@ export class AuthService {
     const payload = {
       sub: user._id,
       email: user.email,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      money: user.money,
+      nickname: user.nickname,
+      pp: user.pp,
     };
-
     return {
-      access: await this.jwt.signAsync({
-        exp: Math.floor(Date.now() / 1000) + 600,
-        data: payload,
-      }),
-      verify: await this.jwt.signAsync({
-        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-        data: payload,
-      }),
+      access: await this.jwt.signAsync(
+        {
+          exp: Math.floor(Date.now() / 1000) + 600,
+          data: payload,
+        },
+        { secret: jwtConstants.secret },
+      ),
+      verify: await this.jwt.signAsync(
+        {
+          exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+          data: payload,
+        },
+        { secret: jwtConstants.secret },
+      ),
     };
   }
 }

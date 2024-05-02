@@ -6,6 +6,6 @@ export class UpdateAuthDto extends PartialType(CreateAuthDto) {
   email: string;
   nickname: string;
   lobbys: string[];
-  coffees: number;
-  picture: string;
+  credit: number;
+  pp: string;
 }

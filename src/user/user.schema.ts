@@ -18,10 +18,10 @@ export class User {
   lobbys: string[];
 
   @Prop({ required: true, default: 0 })
-  credit: string[];
+  credit: string;
 
   @Prop({ required: true, default: '' })
-  profile_picture: string;
+  pp: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
