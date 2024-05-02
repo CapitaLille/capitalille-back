@@ -16,12 +16,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.register(createAuthDto);
+  async register(@Body() createAuthDto: CreateAuthDto) {
+    console.log(createAuthDto);
+    return await this.authService.register(createAuthDto);
   }
 
   @Post('login')
-  login(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.login(createAuthDto);
+  async login(@Body() createAuthDto: CreateAuthDto) {
+    return await this.authService.login(createAuthDto);
   }
 }

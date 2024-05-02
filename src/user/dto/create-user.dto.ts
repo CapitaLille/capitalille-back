@@ -4,5 +4,5 @@ export class CreateUserDto {
   nickname: string;
   lobbys: string[];
   credit: string[];
-  profile_picture: string;
+  pp: string;
 }
