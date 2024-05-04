@@ -1,9 +1,9 @@
+import mongoose from 'mongoose';
+
 export class CreateLobbyDto {
-  owner: string;
-  players: string[];
-  map: string;
+  players: mongoose.Types.ObjectId[];
+  map: mongoose.Types.ObjectId;
   turnSchedule: number;
-  turnCount: number;
   turnCountMax: number;
-  startTime: Date;
+  code: boolean;
 }

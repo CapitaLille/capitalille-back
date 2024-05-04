@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { LobbyService } from './lobby.service';
 import { CreateLobbyDto } from './dto/create-lobby.dto';
@@ -19,8 +20,8 @@ export class LobbyController {
   constructor(private readonly lobbyService: LobbyService) {}
 
   @Post()
-  create(@Body() createLobbyDto: CreateLobbyDto) {
-    return this.lobbyService.create(createLobbyDto);
+  create(@Body() createLobbyDto: CreateLobbyDto, @Request() req) {
+    return this.lobbyService.create(createLobbyDto, req.user.data.sub);
   }
 
   @Get()
