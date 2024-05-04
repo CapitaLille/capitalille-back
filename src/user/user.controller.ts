@@ -36,4 +36,18 @@ export class UserController {
     if (!req.user.data.sub) throw new Error('No UID provided');
     return await this.userService.remove(+id);
   }
+
+  @Post('notification/:notif_id')
+  async answerNotification(
+    @Request() req,
+    @Param('notif_id') notifId: string,
+    answer: boolean,
+  ) {
+    if (!req.user.data.sub) throw new Error('No UID provided');
+    return await this.userService.answerNotification(
+      req.user.data.sub,
+      notifId,
+      answer,
+    );
+  }
 }

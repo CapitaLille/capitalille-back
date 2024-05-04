@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
+import { customAlphabet } from 'nanoid';
 
 async function bootstrap() {
   // Determine the environment
@@ -13,7 +14,10 @@ async function bootstrap() {
   } else {
     dotenv.config({ path: '.env.dev' });
   }
-  console.log(process.env.MONGODB_URL);
+
+  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&';
+  const nanoid = customAlphabet(alphabet, 6);
+
   const app = await NestFactory.create(AppModule);
   await app.listen(3000);
 }
