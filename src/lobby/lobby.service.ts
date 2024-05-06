@@ -1,17 +1,13 @@
 import { HttpStatus, Injectable, UseGuards } from '@nestjs/common';
 import { CreateLobbyDto } from './dto/create-lobby.dto';
-import { UpdateLobbyDto } from './dto/update-lobby.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import Session, { ClientSession, Model, startSession } from 'mongoose';
+import { ClientSession, Model, startSession } from 'mongoose';
 import { User } from 'src/user/user.schema';
 import { JwtService } from '@nestjs/jwt';
 import { Lobby } from './lobby.schema';
 import mongoose from 'mongoose';
 import { PlayerService } from 'src/player/player.service';
-import { CreatePlayerDto } from 'src/player/dto/create-player.dto';
-import { lobbyConstants } from 'src/user/constants';
 import { UserService } from 'src/user/user.service';
-import crypto from 'crypto';
 import { nanoid } from 'nanoid';
 import { AuthGuard } from 'src/auth/auth.guard';
 
@@ -54,20 +50,13 @@ export class LobbyService {
       // Vérification que la carte existe
       console.warn('TODO: Vérification que la carte existe');
 
-      let operations = [];
+      const operations = [];
 
       // Créez les joueurs
       for (let i = 0; i < createLobbyDto.players.length; i++) {
-        let player = new CreatePlayerDto();
-        player.user = createLobbyDto.players[i];
-        player.lobby = newLobbyId;
-        player.money = lobbyConstants.starting.money;
-        player.rating = lobbyConstants.starting.rating;
-        player.transactions = [];
-        player.turnPlayed = false;
-        player.actionPlayed = false;
-        player.houses = [];
-        operations.push(this.playerService.create(player));
+        operations.push(
+          this.playerService.create(createLobbyDto.players[i], newLobbyId),
+        );
         operations.push(
           this.userService.pushNotification({
             from: createLobbyDto.players[i],
@@ -95,14 +84,8 @@ export class LobbyService {
   async addPlayer(
     lobbyId: mongoose.Types.ObjectId,
     userId: mongoose.Types.ObjectId,
-    lobby: Lobby,
   ) {
-    let lobbyFound = null;
-    if (lobby) {
-      lobbyFound = lobby;
-    } else {
-      lobbyFound = await this.lobbyModel.findById(lobbyId);
-    }
+    const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userModel.findById(userId);
 
     if (!user) {
@@ -129,7 +112,7 @@ export class LobbyService {
     return `This action returns a #${id} lobby`;
   }
 
-  update(id: number, updateLobbyDto: UpdateLobbyDto) {
+  update(id: number) {
     return `This action updates a #${id} lobby`;
   }
 

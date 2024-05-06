@@ -8,6 +8,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { LobbyModule } from './lobby/lobby.module';
 import { PlayerModule } from './player/player.module';
+import { MapModule } from './map/map.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PlayerModule } from './player/player.module';
     MongooseModule.forRoot(process.env.MONGODB_URL),
     LobbyModule,
     PlayerModule,
+    MapModule,
   ],
   controllers: [AppController],
   providers: [AppService],
