@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import { customAlphabet } from 'nanoid';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   // Determine the environment
@@ -19,6 +20,7 @@ async function bootstrap() {
   const nanoid = customAlphabet(alphabet, 6);
 
   const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe());
   await app.listen(3000);
 }
 bootstrap();

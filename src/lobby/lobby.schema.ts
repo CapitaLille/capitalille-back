@@ -10,7 +10,7 @@ export class Lobby {
   owner: mongoose.Types.ObjectId;
 
   @Prop({ required: true })
-  players: mongoose.Types.ObjectId[];
+  users: mongoose.Types.ObjectId[];
 
   @Prop({ required: true })
   map: mongoose.Types.ObjectId;

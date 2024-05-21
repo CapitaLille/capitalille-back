@@ -28,10 +28,10 @@ export class PlayerService {
   }
 
   async findAll() {
-    return `This action returns all player`;
+    return await this.playerModel.find();
   }
 
-  async findOne(lobbyId: number) {
+  async findPlayersFromLobby(lobbyId: number) {
     return await this.playerModel.find({ lobby: lobbyId });
   }
 
@@ -39,7 +39,14 @@ export class PlayerService {
     return `This action updates a #${id} player`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} player`;
+  deleteOneFromLobby(
+    userId: mongoose.Types.ObjectId,
+    lobbyId: mongoose.Types.ObjectId,
+  ) {
+    return this.playerModel.deleteOne({ user: userId, lobby: lobbyId });
+  }
+
+  deleteAllFromLobby(lobbyId: mongoose.Types.ObjectId) {
+    return this.playerModel.deleteMany({ lobby: lobbyId });
   }
 }

@@ -25,6 +25,12 @@ export class UserController {
     return await this.userService.findOne(req.user.data.sub);
   }
 
+  @Get('all')
+  async findAll(@Request() req) {
+    if (!req.user.data.sub) throw new Error('No UID provided');
+    return await this.userService.findAll();
+  }
+
   @Patch('')
   async update(@Request() req, @Body() updateUserDto: UpdateUserDto) {
     if (!req.user.data.sub) throw new Error('No UID provided');

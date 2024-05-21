@@ -15,32 +15,23 @@ import { UpdateLobbyDto } from './dto/update-lobby.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('lobby')
-@UseGuards(AuthGuard)
 export class LobbyController {
   constructor(private readonly lobbyService: LobbyService) {}
 
   @Post()
-  create(@Body() createLobbyDto: CreateLobbyDto, @Request() req) {
-    return this.lobbyService.create(createLobbyDto, req.user.data.sub);
+  @UseGuards(AuthGuard)
+  async create(@Body() createLobbyDto: CreateLobbyDto, @Request() req) {
+    return await this.lobbyService.create(createLobbyDto, req.user.data.sub);
   }
 
   @Get()
-  findAll() {
-    return this.lobbyService.findAll();
+  async findAll() {
+    return await this.lobbyService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.lobbyService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLobbyDto: UpdateLobbyDto) {
-    return this.lobbyService.update(+id, updateLobbyDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.lobbyService.remove(+id);
+  @Delete(':lobbyId')
+  @UseGuards(AuthGuard)
+  async remove(@Param('lobbyId') lobbyId: string) {
+    return await this.lobbyService.deleteLobby(lobbyId);
   }
 }
