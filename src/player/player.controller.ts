@@ -6,7 +6,12 @@ export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
 
   @Get(':lobbyId')
-  findOne(@Param('lobbyId') id: string) {
-    return this.playerService.findOne(+id);
+  async findPlayersFromLobby(@Param('lobbyId') id: string) {
+    return await this.playerService.findPlayersFromLobby(+id);
+  }
+
+  @Get('')
+  async findAll() {
+    return await this.playerService.findAll();
   }
 }

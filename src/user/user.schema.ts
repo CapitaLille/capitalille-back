@@ -21,7 +21,7 @@ export class User {
   friends: mongoose.Types.ObjectId[];
 
   @Prop({ required: true, default: 0 })
-  credit: string;
+  credit: number;
 
   @Prop({ required: true, default: '' })
   pp: string;

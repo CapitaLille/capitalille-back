@@ -17,12 +17,16 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() createAuthDto: CreateAuthDto) {
-    console.log(createAuthDto);
     return await this.authService.register(createAuthDto);
   }
 
   @Post('login')
   async login(@Body() createAuthDto: CreateAuthDto) {
     return await this.authService.login(createAuthDto);
+  }
+
+  @Post('verify')
+  async verify(@Body() body: { token: string }) {
+    return await this.authService.verify(body.token);
   }
 }

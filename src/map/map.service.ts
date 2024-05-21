@@ -1,19 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Map } from './map.schema';
+import mongoose, { Model } from 'mongoose';
 
 @Injectable()
 export class MapService {
-  create(createMapDto: CreateMapDto) {
-    return 'This action adds a new map';
+  constructor(@InjectModel('Map') private readonly mapModel: Model<Map>) {}
+
+  async create(createMapDto: CreateMapDto) {
+    return await this.mapModel.create(createMapDto);
   }
 
-  findAll() {
-    return `This action returns all map`;
+  async findAll() {
+    return await this.mapModel.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} map`;
+  async findOne(id: number | mongoose.Types.ObjectId) {
+    return await this.mapModel.findById(id);
   }
 
   update(id: number, updateMapDto: UpdateMapDto) {

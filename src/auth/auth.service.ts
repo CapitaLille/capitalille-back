@@ -85,7 +85,7 @@ export class AuthService {
     return {
       access: await this.jwt.signAsync(
         {
-          exp: Math.floor(Date.now() / 1000) + 600,
+          exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
           data: payload,
         },
         { secret: jwtConstants.secret },

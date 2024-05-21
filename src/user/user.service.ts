@@ -15,23 +15,33 @@ import { bcryptConstants } from './constants';
 import { CreatePushDto } from './dto/create-push.dto';
 import { Notification } from './user.schema';
 import { nanoid } from 'nanoid';
+
 @Injectable()
 export class UserService {
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
-  async findOne(id: number) {
+  async findOne(id: number | mongoose.Types.ObjectId) {
     const user = await this.userModel.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return {
-      id: user._id,
+      id: user._id as any,
+      password: user.password,
       email: user.email,
       nickname: user.nickname,
-      lobbys: user.lobbys,
+      lobbys: user.lobbys as any[],
       credit: user.credit,
       pp: user.pp,
     };
+  }
+
+  async findAll() {
+    const users = await this.userModel.find();
+    if (!users) {
+      throw new NotFoundException('Users not found');
+    }
+    return users;
   }
 
   async pushNotification(notification: CreatePushDto) {
@@ -177,7 +187,10 @@ export class UserService {
     }
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(
+    id: number | mongoose.Types.ObjectId,
+    updateUserDto: UpdateUserDto,
+  ) {
     if (!(await this.userModel.findById(id))) {
       throw new NotFoundException('User not found');
     }

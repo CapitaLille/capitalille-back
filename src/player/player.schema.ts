@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 
-export type LobbyDocument = HydratedDocument<Player>;
+export type PlayerDocument = HydratedDocument<Player>;
 
 @Schema()
 export class Player {
@@ -23,11 +23,16 @@ export class Player {
   actionPlayed: boolean;
 }
 
-export interface Transaction {
+@Schema()
+export class Transaction {
+  @Prop({ required: true })
   amount: number;
+  @Prop({ required: true })
   from: string;
+  @Prop({ required: true })
   to: string;
+  @Prop({ required: true })
   type: string;
 }
 
-export const LobbySchema = SchemaFactory.createForClass(Player);
+export const PlayerSchema = SchemaFactory.createForClass(Player);

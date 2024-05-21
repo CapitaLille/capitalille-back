@@ -3,6 +3,6 @@ export class CreateUserDto {
   password: string;
   nickname: string;
   lobbys: string[];
-  credit: string[];
+  credit: number;
   pp: string;
 }

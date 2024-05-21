@@ -10,14 +10,17 @@ import {
 import { MapService } from './map.service';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Map } from './map.schema';
 
 @Controller('map')
 export class MapController {
   constructor(private readonly mapService: MapService) {}
 
   @Post()
-  create(@Body() createMapDto: CreateMapDto) {
-    return this.mapService.create(createMapDto);
+  async create(@Body() createMapDto: CreateMapDto) {
+    return await this.mapService.create(createMapDto);
   }
 
   @Get()

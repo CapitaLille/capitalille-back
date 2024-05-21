@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { LobbyModule } from './lobby/lobby.module';
 import { PlayerModule } from './player/player.module';
 import { MapModule } from './map/map.module';
+import { HouseModule } from './house/house.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { MapModule } from './map/map.module';
     LobbyModule,
     PlayerModule,
     MapModule,
+    HouseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
