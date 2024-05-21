@@ -7,7 +7,7 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { ClientSession, Model, startSession } from 'mongoose';
 import { User } from './user.schema';
 import * as bcrypt from 'bcrypt';
@@ -18,7 +18,10 @@ import { nanoid } from 'nanoid';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
+  constructor(
+    @InjectModel('User') private readonly userModel: Model<User>,
+    @InjectConnection() private readonly connection: mongoose.Connection,
+  ) {}
 
   async findOne(id: number | mongoose.Types.ObjectId) {
     const user = await this.userModel.findById(id);
@@ -66,7 +69,7 @@ export class UserService {
     return HttpStatus.OK;
   }
 
-  async addFriend(
+  async requestFriend(
     id: mongoose.Types.ObjectId,
     friendId: mongoose.Types.ObjectId,
   ) {
@@ -78,6 +81,37 @@ export class UserService {
     if (!friend) {
       throw new NotFoundException('Friend not found');
     }
+    if (id === friendId) {
+      throw new ConflictException('You cannot add yourself as a friend');
+    }
+    if (user.friends.includes(friendId) || friend.friends.includes(id)) {
+      throw new ConflictException('Friend already added');
+    }
+    const notificationDto: CreatePushDto = {
+      from: id,
+      to: friendId,
+      attached: null,
+      type: 'friendRequest',
+    };
+    await this.pushNotification(notificationDto);
+    return HttpStatus.OK;
+  }
+
+  private async addFriend(
+    id: mongoose.Types.ObjectId,
+    friendId: mongoose.Types.ObjectId,
+  ) {
+    const user = await this.userModel.findById(id);
+    const friend = await this.userModel.findById(friendId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!friend) {
+      throw new NotFoundException('Friend not found');
+    }
+    if (id === friendId) {
+      throw new ConflictException('You cannot add yourself as a friend');
+    }
     if (user.friends.includes(friendId) || friend.friends.includes(id)) {
       throw new ConflictException('Friend already added');
     }
@@ -85,26 +119,20 @@ export class UserService {
     user.friends.push(friendId);
     friend.friends.push(id);
 
-    let session: ClientSession = null;
+    const session = await this.connection.startSession();
     try {
-      session = await startSession();
       session.startTransaction();
 
-      // Vos opérations MongoDB ici
-      // Exemple :
       const operations = [];
       operations.push(user.save());
       operations.push(friend.save());
       await Promise.all(operations);
 
-      // Si toutes les opérations réussissent, commit la transaction
       await session.commitTransaction();
     } catch (error) {
-      // Si une opération échoue, annule la transaction
       await session.abortTransaction();
       throw error; // Optionnel : relancez l'erreur pour la gérer plus haut
     } finally {
-      // Fermez la session
       session.endSession();
     }
 
@@ -130,9 +158,8 @@ export class UserService {
     user.friends.splice(user.friends.indexOf(friendId), 1);
     friend.friends.splice(friend.friends.indexOf(id), 1);
 
-    let session: ClientSession = null;
+    const session = await this.connection.startSession();
     try {
-      session = await startSession();
       session.startTransaction();
 
       // Vos opérations MongoDB ici
@@ -169,7 +196,7 @@ export class UserService {
       (n) => n.uid === notificationId,
     );
     switch (notification.type) {
-      case 'friend_request':
+      case 'friendRequest':
         if (answer) {
           this.addFriend(id, notification.from);
           user.friends.push(notification.from);
@@ -204,7 +231,7 @@ export class UserService {
     return HttpStatus.OK;
   }
 
-  async remove(id: number) {
+  async remove(id: mongoose.Types.ObjectId) {
     if (!(await this.userModel.findById(id))) {
       throw new NotFoundException('User not found');
     }

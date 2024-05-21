@@ -30,10 +30,15 @@ export class User {
   notifications: Notification[];
 }
 
-export interface Notification {
+@Schema()
+export class Notification {
+  @Prop({ required: true })
   uid: string;
+  @Prop({ required: true })
   from: mongoose.Types.ObjectId;
+  @Prop({ required: false, default: '' })
   attached: mongoose.Types.ObjectId;
+  @Prop({ required: true })
   type:
     | 'gameInvite'
     | 'gameStart'
@@ -41,8 +46,10 @@ export interface Notification {
     | 'gameTurn'
     | 'gameAction'
     | 'gameMessage'
-    | 'friend_request';
+    | 'friendRequest';
+  @Prop({ required: true })
   date: Date;
+  @Prop({ required: true })
   read: boolean;
 }
 
