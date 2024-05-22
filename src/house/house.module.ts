@@ -12,5 +12,6 @@ import { LobbySchema } from 'src/lobby/lobby.schema';
     MongooseModule.forFeature([{ name: 'House', schema: HouseSchema }]),
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
   ],
+  exports: [HouseService],
 })
 export class HouseModule {}

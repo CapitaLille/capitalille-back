@@ -51,6 +51,9 @@ export class LobbyService {
       }
 
       const operations = [];
+      if (createLobbyDto.users.find((user) => user === owner) === undefined) {
+        createLobbyDto.users.push(owner);
+      }
       // Créez les joueurs
       for (let i = 0; i < createLobbyDto.users.length; i++) {
         operations.push(
@@ -102,9 +105,23 @@ export class LobbyService {
     if (lobby.users.length >= lobby.maxPlayers) {
       throw new Error('Lobby is full');
     }
+    if (user.lobbys.includes(lobbyId)) {
+      throw new Error('User already in lobby');
+    }
+    const session = await this.connection.startSession();
+    try {
+      session.startTransaction();
+      user.lobbys.push(lobbyId);
+      await this.playerService.create(userId, lobbyId);
+      await this.userService.update(userId, user);
 
-    user.lobbys.push(lobbyId);
-    await this.userService.update(userId, user);
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
 
     return HttpStatus.ACCEPTED;
   }
@@ -134,5 +151,44 @@ export class LobbyService {
 
   async findAll() {
     return await this.lobbyModel.find();
+  }
+
+  async findOne(lobbyId: string) {
+    return await this.lobbyModel.findById(lobbyId);
+  }
+
+  async findPublic(date: Date, page: number, limit: number) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const skip = (page - 1) * limit;
+
+    const lobbys = this.lobbyModel
+      .find({
+        startTime: {
+          $gte: start,
+          $lt: end,
+        },
+        code: { $exists: false },
+      })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    if (!lobbys) {
+      throw new NotFoundException('No lobbys found');
+    }
+    return lobbys;
+  }
+
+  async findPrivate(code: string) {
+    const lobby = await this.lobbyModel.find({ code: code });
+    if (!lobby) {
+      throw new NotFoundException('Lobby not found');
+    }
+    return lobby;
   }
 }

@@ -8,5 +8,6 @@ import { Map, MapSchema } from './map.schema';
   controllers: [MapController],
   providers: [MapService],
   imports: [MongooseModule.forFeature([{ name: 'Map', schema: MapSchema }])],
+  exports: [MapService],
 })
 export class MapModule {}

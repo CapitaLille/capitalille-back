@@ -11,22 +11,22 @@ import { MapSchema } from 'src/map/map.schema';
 import { HouseService } from 'src/house/house.service';
 import { MapService } from 'src/map/map.service';
 import { HouseSchema } from 'src/house/house.schema';
+import { PlayerModule } from 'src/player/player.module';
+import { UserModule } from 'src/user/user.module';
+import { HouseModule } from 'src/house/house.module';
+import { MapModule } from 'src/map/map.module';
 
 @Module({
   controllers: [LobbyController],
-  providers: [
-    LobbyService,
-    PlayerService,
-    UserService,
-    HouseService,
-    MapService,
-  ],
+  providers: [LobbyService],
   imports: [
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
-    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     MongooseModule.forFeature([{ name: 'Player', schema: PlayerSchema }]),
-    MongooseModule.forFeature([{ name: 'Map', schema: MapSchema }]),
-    MongooseModule.forFeature([{ name: 'House', schema: HouseSchema }]),
+    UserModule,
+    PlayerModule,
+    HouseModule,
+    MapModule,
   ],
+  exports: [LobbyService],
 })
 export class LobbyModule {}
