@@ -15,11 +15,13 @@ import { bcryptConstants } from './constants';
 import { CreatePushDto } from './dto/create-push.dto';
 import { Notification } from './user.schema';
 import { nanoid } from 'nanoid';
+import { LobbyService } from 'src/lobby/lobby.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel('User') private readonly userModel: Model<User>,
+    // private readonly lobbyService: LobbyService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -45,28 +47,6 @@ export class UserService {
       throw new NotFoundException('Users not found');
     }
     return users;
-  }
-
-  async pushNotification(notification: CreatePushDto) {
-    const from = await this.userModel.findById(notification.from);
-    const to = await this.userModel.findById(notification.to);
-    if (!from) {
-      throw new NotFoundException("Notification's sender not found");
-    }
-    if (!to) {
-      throw new NotFoundException("Notification's receiver not found");
-    }
-    const newNotification: Notification = {
-      uid: nanoid(20),
-      from: notification.from,
-      attached: notification.attached,
-      type: notification.type,
-      date: new Date(),
-      read: false,
-    };
-    to.notifications.push(newNotification);
-    await to.save();
-    return HttpStatus.OK;
   }
 
   async requestFriend(
@@ -183,12 +163,34 @@ export class UserService {
     return HttpStatus.OK;
   }
 
+  async pushNotification(notification: CreatePushDto) {
+    const from = await this.userModel.findById(notification.from);
+    const to = await this.userModel.findById(notification.to);
+    if (!from) {
+      throw new NotFoundException("Notification's sender not found");
+    }
+    if (!to) {
+      throw new NotFoundException("Notification's receiver not found");
+    }
+    const newNotification: Notification = {
+      uid: nanoid(20),
+      from: notification.from,
+      attached: notification.attached,
+      type: notification.type,
+      date: new Date(),
+      read: false,
+    };
+    to.notifications.push(newNotification);
+    await to.save();
+    return HttpStatus.OK;
+  }
+
   async answerNotification(
-    id: mongoose.Types.ObjectId,
+    userId: mongoose.Types.ObjectId,
     notificationId: string,
     answer: boolean,
   ) {
-    const user = await this.userModel.findById(id);
+    const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -198,20 +200,20 @@ export class UserService {
     switch (notification.type) {
       case 'friendRequest':
         if (answer) {
-          this.addFriend(id, notification.from);
-          user.friends.push(notification.from);
-          await user.save();
+          this.addFriend(userId, notification.from);
         }
         break;
       case 'gameInvite':
         if (answer) {
-          user.lobbys.push(notification.attached);
-          await user.save();
+          // this.lobbyService.addPlayer(notification.attached, userId);
         }
         break;
       default:
         throw new ConflictException('Invalid notification type');
     }
+    user.notifications.find((n) => n.uid === notificationId).read = true;
+    await user.save();
+    return HttpStatus.OK;
   }
 
   async update(
@@ -221,12 +223,12 @@ export class UserService {
     if (!(await this.userModel.findById(id))) {
       throw new NotFoundException('User not found');
     }
-    if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(
-        updateUserDto.password,
-        bcryptConstants.salt,
-      );
-    }
+    // if (updateUserDto.password) {
+    //   updateUserDto.password = await bcrypt.hash(
+    //     updateUserDto.password,
+    //     bcryptConstants.salt,
+    //   );
+    // }
     await this.userModel.findByIdAndUpdate(id, updateUserDto);
     return HttpStatus.OK;
   }
