@@ -14,7 +14,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import mongoose from 'mongoose';
-
+import { ObjectId } from 'mongodb';
+import { idDto } from 'src/app.dto';
 @Controller('user')
 @UseGuards(AuthGuard)
 export class UserController {
@@ -39,15 +40,15 @@ export class UserController {
   }
 
   @Post('friends/:id')
-  async addFriend(@Request() req, @Param('id') id: mongoose.Types.ObjectId) {
+  async addFriend(@Request() req, @Param('id') targetId: string) {
     if (!req.user.data.sub) throw new Error('No UID provided');
-    return await this.userService.requestFriend(req.user.data.sub, id);
+    return await this.userService.requestFriend(req.user.data.sub, targetId);
   }
 
   @Delete('')
-  async remove(@Request() req, @Param('id') id: mongoose.Types.ObjectId) {
+  async remove(@Request() req, @Param('id') targetId: string) {
     if (!req.user.data.sub) throw new Error('No UID provided');
-    return await this.userService.remove(id);
+    return await this.userService.remove(targetId);
   }
 
   @Post('notification/:notif_id')

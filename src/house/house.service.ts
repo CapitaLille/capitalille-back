@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLobbyHousesDto } from './dto/create-lobby-houses.dto';
 import { UpdateHouseDto } from './dto/update-house.dto';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
@@ -37,8 +37,6 @@ export class HouseService {
           createLobbyHousesDto.map.configuration.defectRate.electricity;
         const newHouse = new this.houseModel({
           lobby: createLobbyHousesDto.lobby,
-          owner: '',
-          next_owner: '',
           price: house.price,
           rent: house.rent,
           level: 0,
@@ -68,7 +66,7 @@ export class HouseService {
     }
   }
 
-  async destroyLobbyHouses(lobbyId: mongoose.Types.ObjectId) {
+  async destroyLobbyHouses(lobbyId: string) {
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
@@ -83,11 +81,48 @@ export class HouseService {
     }
   }
 
-  async findAll(lobby: number) {
-    return await this.houseModel.find({ lobby });
+  async freeHouseFromOwner(ownerId: string, lobbyId: string) {
+    const houses = await this.houseModel.find({
+      owner: ownerId,
+      lobby: lobbyId,
+    });
+    if (!houses) return;
+    return await this.houseModel.updateMany(
+      { owner: ownerId, lobby: lobbyId },
+      {
+        owner: '',
+        level: 0,
+        activeDefect: { fire: false, water: false, electricity: false },
+      },
+    );
   }
 
-  async findOne(lobby: number, index: number) {
-    return await this.houseModel.findOne({ lobby, index });
+  async findAllFromLobby(lobby: string) {
+    console.log(lobby, typeof lobby);
+    const houses = await this.houseModel
+      .find({
+        lobby: lobby,
+      })
+      .exec();
+    console.log('houses', houses);
+    if (!houses) {
+      throw new NotFoundException('No houses found in this lobby');
+    }
+    return houses;
+  }
+
+  async findAll() {
+    return await this.houseModel.find();
+  }
+
+  async findOne(lobby: string, index: any) {
+    const house = await this.houseModel.findOne({
+      lobby: lobby,
+      index,
+    });
+    if (!house) {
+      throw new NotFoundException('House not found');
+    }
+    return house;
   }
 }

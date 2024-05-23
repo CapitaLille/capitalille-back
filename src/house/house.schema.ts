@@ -6,16 +6,16 @@ export type HouseDocument = HydratedDocument<House>;
 @Schema()
 export class House {
   @Prop({ required: true })
-  index: mongoose.Types.ObjectId; // index of the house in the map document
+  index: number; // index of the house in the map document
 
   @Prop({ required: true })
-  lobby: mongoose.Types.ObjectId;
+  lobby: string;
 
-  @Prop({ required: true })
-  owner: mongoose.Types.ObjectId;
+  @Prop({ required: false, default: '' })
+  owner: string;
 
-  @Prop({ required: true })
-  next_owner: mongoose.Types.ObjectId[];
+  @Prop({ required: false, default: '' })
+  next_owner: string;
 
   @Prop({ required: true })
   auction: number;

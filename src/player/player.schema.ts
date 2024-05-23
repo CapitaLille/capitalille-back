@@ -6,11 +6,11 @@ export type PlayerDocument = HydratedDocument<Player>;
 @Schema()
 export class Player {
   @Prop({ required: true })
-  user: mongoose.Types.ObjectId;
+  user: string;
   @Prop({ required: true })
-  lobby: mongoose.Types.ObjectId;
+  lobby: string;
   @Prop({ required: true })
-  houses: mongoose.Types.ObjectId;
+  houses: string[];
   @Prop({ required: true, default: 0 })
   money: number;
   @Prop({ required: true, default: 2.5 })

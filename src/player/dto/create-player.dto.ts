@@ -18,7 +18,7 @@ export class CreatePlayerDto {
   })
   @IsDefined({ message: 'user is required' })
   @IsMongoId({ message: 'user must be a valid MongoDB ObjectId' })
-  user: mongoose.Types.ObjectId;
+  user: string;
 
   @ApiProperty({
     description: 'The lobby ID.',
@@ -26,7 +26,7 @@ export class CreatePlayerDto {
   })
   @IsDefined({ message: 'lobby is required' })
   @IsMongoId({ message: 'lobby must be a valid MongoDB ObjectId' })
-  lobby: mongoose.Types.ObjectId;
+  lobby: string;
 
   @ApiProperty({
     description: 'An array of house IDs.',
@@ -38,7 +38,7 @@ export class CreatePlayerDto {
     each: true,
     message: 'Each house ID must be a valid MongoDB ObjectId',
   })
-  houses: mongoose.Types.ObjectId[];
+  houses: string[];
 
   @ApiProperty({
     description: 'The amount of money.',

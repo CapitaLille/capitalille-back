@@ -9,7 +9,7 @@ export class CreatePushDto {
   })
   @IsDefined({ message: 'From is required' })
   @IsMongoId({ message: 'From must be a valid MongoDB ObjectId' })
-  from: mongoose.Types.ObjectId;
+  from: string;
 
   @ApiProperty({
     description: 'The ID of the receiver.',
@@ -17,7 +17,7 @@ export class CreatePushDto {
   })
   @IsDefined({ message: 'To is required' })
   @IsMongoId({ message: 'To must be a valid MongoDB ObjectId' })
-  to: mongoose.Types.ObjectId;
+  to: string;
 
   @ApiProperty({
     description: 'The ID of the attached resource.',
@@ -25,7 +25,7 @@ export class CreatePushDto {
   })
   @IsDefined({ message: 'Attached is required' })
   @IsMongoId({ message: 'Attached must be a valid MongoDB ObjectId' })
-  attached: mongoose.Types.ObjectId;
+  attached: string;
 
   @ApiProperty({
     description: 'The type of push notification.',

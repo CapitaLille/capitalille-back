@@ -13,19 +13,7 @@ export class MapService {
     return await this.mapModel.create(createMapDto);
   }
 
-  async findAll() {
-    return await this.mapModel.find();
-  }
-
-  async findOne(id: number | mongoose.Types.ObjectId) {
-    return await this.mapModel.findById(id);
-  }
-
-  update(id: number, updateMapDto: UpdateMapDto) {
-    return `This action updates a #${id} map`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} map`;
+  async findOne(mapId: string) {
+    return await this.mapModel.findById(mapId);
   }
 }

@@ -13,6 +13,9 @@ import { LobbyService } from './lobby.service';
 import { CreateLobbyDto } from './dto/create-lobby.dto';
 import { UpdateLobbyDto } from './dto/update-lobby.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import mongoose from 'mongoose';
+import { idDto } from 'src/app.dto';
+import { ObjectId } from 'mongodb';
 
 @Controller('lobby')
 export class LobbyController {
