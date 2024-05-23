@@ -32,19 +32,22 @@ export class Case {
   next: number[];
 
   @Prop({ required: true })
-  type:
-    | 'metro'
-    | 'bus'
-    | 'bank'
-    | 'park'
-    | 'event'
-    | 'default'
-    | 'house'
-    | 'intersection'
-    | 'monuments';
+  type: CaseType;
 
   @Prop({ required: true, type: [Number] })
   coordinates: [number, number];
+}
+
+export enum CaseType {
+  metro,
+  bus,
+  bank,
+  park,
+  event,
+  default,
+  house,
+  intersection,
+  monuments,
 }
 
 export const CaseConfigSchema = SchemaFactory.createForClass(Case);
@@ -52,7 +55,16 @@ export const CaseConfigSchema = SchemaFactory.createForClass(Case);
 @Schema()
 export class Configuration {
   @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ required: true })
   salary: number;
+
+  @Prop({ required: false, default: [0.8, 1.2] })
+  ratingMultiplicator: [number, number];
 
   @Prop({ required: true, type: { tax: Number, value: Number } })
   bank: { tax: number; value: number };
@@ -81,15 +93,15 @@ export class Configuration {
 
   @Prop({ required: true })
   parkRatingBonus: number; // 0 to 5
+
+  @Prop({ required: false, default: 0 })
+  price: number;
 }
 
 export const ConfigurationSchema = SchemaFactory.createForClass(Configuration);
 
 @Schema()
 export class Map {
-  @Prop({ required: true })
-  name: string;
-
   @Prop({ required: true, type: [HouseConfigSchema] })
   houses: House[];
 

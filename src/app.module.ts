@@ -10,21 +10,23 @@ import { LobbyModule } from './lobby/lobby.module';
 import { PlayerModule } from './player/player.module';
 import { MapModule } from './map/map.module';
 import { HouseModule } from './house/house.module';
+import { ServerModule } from './server/server.module';
 
 @Module({
   imports: [
-    UserModule,
-    AuthModule,
     ConfigModule.forRoot({
       envFilePath: ['.env.dev', '.env.prod'],
       isGlobal: true,
       cache: true,
     }),
     MongooseModule.forRoot(process.env.MONGODB_URL),
+    UserModule,
+    AuthModule,
     LobbyModule,
     PlayerModule,
     MapModule,
     HouseModule,
+    ServerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

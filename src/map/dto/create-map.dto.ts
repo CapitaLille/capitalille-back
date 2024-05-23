@@ -5,14 +5,6 @@ import { Case, Configuration, House } from '../map.schema';
 
 export class CreateMapDto {
   @ApiProperty({
-    description: 'The name of the map.',
-    type: String,
-  })
-  @IsDefined({ message: 'name is required' })
-  @IsString({ message: 'name must be a string' })
-  name: string;
-
-  @ApiProperty({
     description: 'An array of houses.',
     type: [House],
   })

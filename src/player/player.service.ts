@@ -28,8 +28,16 @@ export class PlayerService {
     return await this.playerModel.find();
   }
 
-  async findPlayersFromLobby(lobbyId: string) {
-    return await this.playerModel.find({ lobby: lobbyId });
+  async findOne(userId: string, lobbyId: string) {
+    return await this.playerModel.findOne({ user: userId, lobby: lobbyId });
+  }
+
+  async findAllFromLobby(lobbyId: string) {
+    const players = await this.playerModel.find({ lobby: lobbyId });
+    if (!players) {
+      return undefined;
+    }
+    return players;
   }
 
   update(id: number) {

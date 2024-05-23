@@ -97,16 +97,14 @@ export class HouseService {
     );
   }
 
-  async findAllFromLobby(lobby: string) {
-    console.log(lobby, typeof lobby);
+  async findAllFromLobby(lobbyId: string) {
     const houses = await this.houseModel
       .find({
-        lobby: lobby,
+        lobby: lobbyId,
       })
       .exec();
-    console.log('houses', houses);
     if (!houses) {
-      throw new NotFoundException('No houses found in this lobby');
+      return undefined;
     }
     return houses;
   }
@@ -115,13 +113,33 @@ export class HouseService {
     return await this.houseModel.find();
   }
 
-  async findOne(lobby: string, index: any) {
+  async findOne(lobbyId: string, houseIndex: any) {
     const house = await this.houseModel.findOne({
-      lobby: lobby,
-      index,
+      lobby: lobbyId,
+      index: houseIndex,
     });
     if (!house) {
       throw new NotFoundException('House not found');
+    }
+    return house;
+  }
+
+  async findWithCase(
+    caseIndex: number,
+    lobbyId: string,
+  ): Promise<
+    | (mongoose.Document<unknown, {}, House> &
+        House & {
+          _id: mongoose.Types.ObjectId;
+        })
+    | undefined
+  > {
+    const house = await this.houseModel.findOne({
+      lobby: lobbyId,
+      index: caseIndex,
+    });
+    if (!house) {
+      return undefined;
     }
     return house;
   }
