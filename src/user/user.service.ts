@@ -28,7 +28,7 @@ export class UserService {
   async findOne(userId: string) {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      return undefined;
     }
     return {
       id: user._id,

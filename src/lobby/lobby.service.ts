@@ -9,6 +9,7 @@ import { UserService } from 'src/user/user.service';
 import { nanoid } from 'nanoid';
 import { HouseService } from 'src/house/house.service';
 import { MapService } from 'src/map/map.service';
+import { CreateLobbyHousesDto } from 'src/house/dto/create-lobby-houses.dto';
 
 @Injectable()
 export class LobbyService {
@@ -72,7 +73,7 @@ export class LobbyService {
       }
 
       // Créez les maisons
-      const createLobbyHousesDto = {
+      const createLobbyHousesDto: CreateLobbyHousesDto = {
         lobby: newLobbyId,
         map: map,
       };
@@ -217,10 +218,15 @@ export class LobbyService {
     return lobbys;
   }
 
-  async findPrivate(code: string) {
-    const lobby = await this.lobbyModel.find({ code: code });
+  async findPrivate(code: string): Promise<
+    mongoose.Document<unknown, {}, Lobby> &
+      Lobby & {
+        _id: mongoose.Types.ObjectId;
+      }
+  > {
+    const lobby = await this.lobbyModel.findOne({ code: code });
     if (!lobby) {
-      throw new NotFoundException('Lobby not found');
+      return undefined;
     }
     return lobby;
   }

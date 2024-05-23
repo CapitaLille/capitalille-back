@@ -8,8 +8,8 @@ export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
 
   @Get(':lobbyId')
-  async findPlayersFromLobby(@Param('lobbyId') lobbyId: string) {
-    return await this.playerService.findPlayersFromLobby(lobbyId);
+  async findAllFromLobby(@Param('lobbyId') lobbyId: string) {
+    return await this.playerService.findAllFromLobby(lobbyId);
   }
 
   @Get('')

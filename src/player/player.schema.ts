@@ -9,17 +9,21 @@ export class Player {
   user: string;
   @Prop({ required: true })
   lobby: string;
-  @Prop({ required: true })
-  houses: string[];
-  @Prop({ required: true, default: 0 })
+  @Prop({ required: false, default: [] })
+  houses: number[];
+  @Prop({ required: false, default: 0 })
   money: number;
-  @Prop({ required: true, default: 2.5 })
+  @Prop({ required: false, default: 2.5 })
   rating: number;
-  @Prop({ required: true, default: [] })
+  @Prop({ required: false, default: 0 })
+  casePosition: number;
+  @Prop({ required: false, default: [] })
+  bonuses: playerVaultType[];
+  @Prop({ required: false, default: [] })
   transactions: Transaction[];
-  @Prop({ required: true, default: false })
+  @Prop({ required: false, default: false })
   turnPlayed: boolean;
-  @Prop({ required: true, default: false })
+  @Prop({ required: false, default: false })
   actionPlayed: boolean;
 }
 
@@ -33,6 +37,16 @@ export class Transaction {
   to: string;
   @Prop({ required: true })
   type: string;
+}
+
+export enum playerVaultType {
+  diceDouble,
+  diceDividedBy2,
+  dicePlus2,
+  diceMinus2,
+  forward3,
+  backward3,
+  loan,
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);
