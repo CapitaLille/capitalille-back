@@ -251,7 +251,7 @@ export class ServerService {
   }
 
   /**
-   *
+   * Transfer money from a player to another.
    * @param amount of money to transfer
    * @param fromPlayer Source player
    * @param toId Destination player id
