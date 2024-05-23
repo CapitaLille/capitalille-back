@@ -10,6 +10,7 @@ import { MapService } from 'src/map/map.service';
 import { Player, playerVaultType } from 'src/player/player.schema';
 import { PlayerService } from 'src/player/player.service';
 import { ServerGuardSocket } from './server.gateway';
+import { PlayerSocketId } from './server.type';
 
 @Injectable()
 /**
@@ -25,9 +26,35 @@ export class ServerService {
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
+  socketIds: PlayerSocketId[] = [];
+
+  async setSocketId(playerId: string, socketId: string) {
+    const index = this.socketIds.findIndex(
+      (pair) => pair.playerId === playerId,
+    );
+    if (index === -1) {
+      this.socketIds.push({ playerId, socketId });
+    } else {
+      this.socketIds[index].socketId = socketId;
+    }
+  }
+
+  async removeSocketId(playerId: string) {
+    const index = this.socketIds.findIndex(
+      (pair) => pair.playerId === playerId,
+    );
+    if (index !== -1) {
+      this.socketIds.splice(index, 1);
+    }
+  }
+
+  async getSocketId(playerId: string) {
+    return this.socketIds.find((pair) => pair.playerId === playerId)?.socketId;
+  }
+
   async gameSession(
     lobbyId: string,
-    playerId: string,
+    userId: string,
     run: (
       lobby: mongoose.Document<unknown, {}, Lobby> &
         Lobby & {
@@ -42,7 +69,6 @@ export class ServerService {
           _id: mongoose.Types.ObjectId;
         },
     ) => Promise<void>,
-    errorMessage: string,
   ) {
     const session = await this.connection.startSession();
     try {
@@ -51,7 +77,7 @@ export class ServerService {
       if (!lobby) {
         throw new Error('Lobby not found');
       }
-      const player = await this.playerService.findOne(playerId, lobbyId);
+      const player = await this.playerService.findOne(userId, lobbyId);
       if (!player) {
         throw new Error('Player not found');
       }
@@ -63,7 +89,7 @@ export class ServerService {
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
-      throw new Error('Transaction failed: ' + errorMessage);
+      throw new Error('Transaction failed: ' + error.message);
     } finally {
       session.endSession();
     }
@@ -134,7 +160,7 @@ export class ServerService {
         _id: mongoose.Types.ObjectId;
       };
   }> {
-    let path: Case[] = [map.cases[player.casePosition]];
+    const path: Case[] = [map.cases[player.casePosition]];
     const playerSalary =
       this.ratingMultiplicator(player, map) * map.configuration.salary;
     for (let i = 0; i < dice; i++) {
@@ -195,6 +221,7 @@ export class ServerService {
             player,
             house.owner,
             'rent',
+            socket,
             true,
             false,
           );
@@ -256,13 +283,13 @@ export class ServerService {
     await fromPlayer.save();
     await toPlayer.save();
     if (announce) {
-      socket.emit('moneyChange', {
-        from: fromPlayer,
-        to: toPlayer,
-        amount,
-        type,
-      });
-      // Emit event
+      // socket.emit('moneyChange', {
+      //   from: fromPlayer,
+      //   to: toPlayer,
+      //   amount,
+      //   type,
+      // });
+      // Emit event  to  specific player
     }
   }
 }

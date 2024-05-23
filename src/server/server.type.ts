@@ -1,3 +1,5 @@
+import e from 'express';
+
 export class GameError<T> {
   event: string;
   data: T;
@@ -17,4 +19,16 @@ export class GameResponse<T> {
     this.data = { message, ...data };
     this.event = event;
   }
+}
+
+export enum GameEvent {
+  ERROR = 'error',
+  GET_PARTY = 'getParty',
+  PLAY_TURN = 'playTurn',
+  TRY = 'try',
+}
+
+export interface PlayerSocketId {
+  playerId: string;
+  socketId: string;
 }

@@ -14,7 +14,7 @@ import { ServerGuard } from './server.guard';
 import { Socket } from 'socket.io';
 import { LobbyService } from 'src/lobby/lobby.service';
 import { Observable } from 'rxjs';
-import { GameError, GameResponse } from './responseType';
+import { GameError, GameEvent, GameResponse } from './server.type';
 import e from 'express';
 import { HouseService } from 'src/house/house.service';
 import { PlayerService } from 'src/player/player.service';
@@ -44,12 +44,21 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
-  handleDisconnect(client: any) {
-    // console.log('client disconnected', client.id);
-  }
-
   handleConnection(client: any, ...args: any[]) {
     console.log('client connected', client.id);
+  }
+
+  handleDisconnect(client: any) {
+    console.log('client disconnected', client.id);
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage('suscribe')
+  async suscribe(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    this.serverService.setSocketId(socket.handshake.user.sub, socket.id);
   }
 
   @UseGuards(ServerGuard)
@@ -57,31 +66,20 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async getParty(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
-  ): Promise<WsResponse<any>> {
-    // console.log('socket', socket.handshake.user);
-    const lobby = await this.lobbyService.findOne(data.lobbyId);
-    if (!lobby) {
-      console.log('Lobby not found');
-      return new GameError('Lobby not found');
-    }
-    if (!lobby.users.includes(socket.handshake.user.sub)) {
-      return new GameError('You are not part of this lobby');
-    }
-    const session = await this.connection.startSession();
+  ) {
+    const userId = socket.handshake.user.sub;
     try {
-      session.startTransaction();
-      const houses = await this.houseService.findAllFromLobby(lobby.id);
-      const players = await this.playerService.findAllFromLobby(lobby.id);
-      const map = await this.mapService.findOne(lobby.map);
-      await session.commitTransaction();
-      console.log('getParty', { lobby, houses, players, map });
-      return new GameResponse('getParty', { lobby, houses, players, map });
+      this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        async (lobby, player, map) => {
+          const players = await this.playerService.findAllFromLobby(lobby.id);
+          const houses = await this.houseService.findAllFromLobby(lobby.id);
+          socket.emit(GameEvent.GET_PARTY, { lobby, houses, players, map });
+        },
+      );
     } catch (error) {
-      await session.abortTransaction();
-      return new GameError('Error while fetching lobby data');
-    } finally {
-      session.endSession();
-      console.log('endSession');
+      socket.emit(GameEvent.ERROR, { message: error.message });
     }
   }
 
@@ -103,15 +101,12 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
           const dice = this.serverService.generateDice(player);
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice, map, player);
-          const lastAction = await this.serverService.mandatoryAction(
-            map,
-            newPlayer,
-          );
+          await this.serverService.mandatoryAction(map, newPlayer, socket);
+          socket.emit(GameEvent.PLAY_TURN, { path, salary });
         },
-        'Error while playing turn',
       );
     } catch (error) {
-      return new GameError(error.message);
+      socket.emit(GameEvent.ERROR, { message: error.message });
     }
   }
 
