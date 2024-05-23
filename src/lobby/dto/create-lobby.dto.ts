@@ -7,6 +7,10 @@ import {
   IsMongoId,
   IsInt,
   IsBoolean,
+  IsNumber,
+  IsNumberString,
+  IsBooleanString,
+  ArrayUnique,
 } from 'class-validator';
 import mongoose from 'mongoose';
 
@@ -21,7 +25,8 @@ export class CreateLobbyDto {
     each: true,
     message: 'Each user ID must be a valid MongoDB ObjectId',
   })
-  users: mongoose.Types.ObjectId[];
+  @ArrayUnique({ message: 'Users must not contain duplicate IDs' })
+  users: string[];
 
   @ApiProperty({
     description: 'The map ID.',
@@ -29,14 +34,14 @@ export class CreateLobbyDto {
   })
   @IsDefined({ message: 'map is required' })
   @IsMongoId({ message: 'map must be a valid MongoDB ObjectId' })
-  map: mongoose.Types.ObjectId;
+  map: string;
 
   @ApiProperty({
     description: 'The turn schedule in milliseconds.',
     type: Number,
   })
   @IsDefined({ message: 'turnSchedule is required' })
-  @IsInt({ message: 'turnSchedule must be an integer' })
+  @IsNumberString({}, { message: 'turnSchedule must be a number' })
   turnSchedule: number;
 
   @ApiProperty({
@@ -44,7 +49,7 @@ export class CreateLobbyDto {
     type: Number,
   })
   @IsDefined({ message: 'turnCountMax is required' })
-  @IsInt({ message: 'turnCountMax must be an integer' })
+  @IsNumberString({}, { message: 'turnCountMax must be a number' })
   turnCountMax: number;
 
   @ApiProperty({
@@ -52,6 +57,6 @@ export class CreateLobbyDto {
     type: Boolean,
   })
   @IsDefined({ message: 'code is required' })
-  @IsBoolean({ message: 'code must be a boolean' })
+  @IsBooleanString({ message: 'code must be a boolean' })
   code: boolean;
 }

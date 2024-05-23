@@ -11,10 +11,7 @@ export class PlayerService {
     @InjectModel('Player') private readonly playerModel: Model<Player>,
   ) {}
 
-  async create(
-    userId: mongoose.Types.ObjectId,
-    lobbyId: mongoose.Types.ObjectId,
-  ) {
+  async create(userId: string, lobbyId: string) {
     const player = new CreatePlayerDto();
     player.user = userId;
     player.lobby = lobbyId;
@@ -31,7 +28,7 @@ export class PlayerService {
     return await this.playerModel.find();
   }
 
-  async findPlayersFromLobby(lobbyId: number) {
+  async findPlayersFromLobby(lobbyId: string) {
     return await this.playerModel.find({ lobby: lobbyId });
   }
 
@@ -39,14 +36,11 @@ export class PlayerService {
     return `This action updates a #${id} player`;
   }
 
-  deleteOneFromLobby(
-    userId: mongoose.Types.ObjectId,
-    lobbyId: mongoose.Types.ObjectId,
-  ) {
+  deleteOneFromLobby(userId: string, lobbyId: string) {
     return this.playerModel.deleteOne({ user: userId, lobby: lobbyId });
   }
 
-  deleteAllFromLobby(lobbyId: mongoose.Types.ObjectId) {
+  deleteAllFromLobby(lobbyId: string) {
     return this.playerModel.deleteMany({ lobby: lobbyId });
   }
 }

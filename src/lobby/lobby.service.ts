@@ -21,7 +21,7 @@ export class LobbyService {
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
-  async create(createLobbyDto: CreateLobbyDto, owner: mongoose.Types.ObjectId) {
+  async create(createLobbyDto: CreateLobbyDto, ownerId: string) {
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
@@ -29,10 +29,9 @@ export class LobbyService {
       // Créez le lobby
       const newLobbyId = new mongoose.Types.ObjectId();
       const lobbyCode = nanoid(6);
-
       const newLobby = new this.lobbyModel({
         _id: newLobbyId,
-        owner,
+        owner: ownerId,
         users: createLobbyDto.users,
         map: createLobbyDto.map,
         turnSchedule: createLobbyDto.turnSchedule,
@@ -51,19 +50,22 @@ export class LobbyService {
       }
 
       const operations = [];
-      if (createLobbyDto.users.find((user) => user === owner) === undefined) {
-        createLobbyDto.users.push(owner);
+      if (createLobbyDto.users.find((user) => user === ownerId) === undefined) {
+        createLobbyDto.users.push(ownerId);
       }
       // Créez les joueurs
       for (let i = 0; i < createLobbyDto.users.length; i++) {
         operations.push(
-          this.playerService.create(createLobbyDto.users[i], newLobbyId),
+          this.playerService.create(
+            createLobbyDto.users[i],
+            newLobbyId.toString(),
+          ),
         );
         operations.push(
           this.userService.pushNotification({
             from: createLobbyDto.users[i],
             to: createLobbyDto.users[i],
-            attached: newLobbyId,
+            attached: newLobbyId.toString(),
             type: 'gameInvite',
           }),
         );
@@ -89,10 +91,7 @@ export class LobbyService {
     return HttpStatus.CREATED;
   }
 
-  async addPlayer(
-    lobbyId: mongoose.Types.ObjectId,
-    userId: mongoose.Types.ObjectId,
-  ) {
+  async addPlayer(lobbyId: string, userId: string) {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userService.findOne(userId);
 
@@ -126,6 +125,40 @@ export class LobbyService {
     return HttpStatus.ACCEPTED;
   }
 
+  async removePlayer(lobbyId: string, userId: string) {
+    const lobby = await this.lobbyModel.findById(lobbyId);
+    const user = await this.userService.findOne(userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+    if (!lobby) {
+      throw new Error('Lobby not found');
+    }
+    if (!user.lobbys.includes(lobbyId)) {
+      throw new Error('User not in lobby');
+    }
+    if (userId === lobby.owner) {
+      throw new Error('Owner cannot leave lobby');
+    }
+    const session = await this.connection.startSession();
+    try {
+      session.startTransaction();
+      await this.playerService.deleteOneFromLobby(userId, lobbyId);
+      await this.houseService.freeHouseFromOwner(userId, lobbyId);
+      // Remove conversation of the user.
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+
+    return HttpStatus.ACCEPTED;
+  }
+
   async deleteLobby(lobbyId: string) {
     const session = await this.connection.startSession();
     try {
@@ -135,8 +168,8 @@ export class LobbyService {
       if (!lobby || !lobby._id) {
         throw new NotFoundException('Lobby not found');
       }
-      await this.playerService.deleteAllFromLobby(lobby._id);
-      await this.houseService.destroyLobbyHouses(lobby._id);
+      await this.playerService.deleteAllFromLobby(lobbyId);
+      await this.houseService.destroyLobbyHouses(lobbyId);
 
       await session.commitTransaction();
     } catch (error) {

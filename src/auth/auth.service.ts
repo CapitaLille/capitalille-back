@@ -15,6 +15,7 @@ import { User } from 'src/user/user.schema';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { bcryptConstants, jwtConstants } from 'src/user/constants';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -41,12 +42,12 @@ export class AuthService {
     return token;
   }
 
-  async login(data: { email: string; password: string }) {
-    const foundUser = await this.userModel.findOne({ email: data.email });
+  async login(loginDto: LoginDto) {
+    const foundUser = await this.userModel.findOne({ email: loginDto.email });
     if (!foundUser) {
       throw new NotFoundException('User not found');
     }
-    const valid = await bcrypt.compare(data.password, foundUser?.password);
+    const valid = await bcrypt.compare(loginDto.password, foundUser?.password);
     if (!valid) {
       throw new HttpException('Wrong password', HttpStatus.FORBIDDEN);
     } else {

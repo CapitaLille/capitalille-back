@@ -7,13 +7,13 @@ export type LobbyDocument = HydratedDocument<Lobby>;
 @Schema()
 export class Lobby {
   @Prop({ required: true })
-  owner: mongoose.Types.ObjectId;
+  owner: string;
 
   @Prop({ required: true })
-  users: mongoose.Types.ObjectId[];
+  users: string[];
 
   @Prop({ required: true })
-  map: mongoose.Types.ObjectId;
+  map: string;
 
   @Prop({
     required: true,

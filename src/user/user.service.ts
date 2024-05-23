@@ -25,13 +25,13 @@ export class UserService {
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
-  async findOne(id: number | mongoose.Types.ObjectId) {
-    const user = await this.userModel.findById(id);
+  async findOne(userId: string) {
+    const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return {
-      id: user._id as any,
+      id: user._id,
       password: user.password,
       email: user.email,
       nickname: user.nickname,
@@ -49,10 +49,7 @@ export class UserService {
     return users;
   }
 
-  async requestFriend(
-    id: mongoose.Types.ObjectId,
-    friendId: mongoose.Types.ObjectId,
-  ) {
+  async requestFriend(id: string, friendId: string) {
     const user = await this.userModel.findById(id);
     const friend = await this.userModel.findById(friendId);
     if (!user) {
@@ -77,10 +74,7 @@ export class UserService {
     return HttpStatus.OK;
   }
 
-  private async addFriend(
-    id: mongoose.Types.ObjectId,
-    friendId: mongoose.Types.ObjectId,
-  ) {
+  private async addFriend(id: string, friendId: string) {
     const user = await this.userModel.findById(id);
     const friend = await this.userModel.findById(friendId);
     if (!user) {
@@ -119,10 +113,7 @@ export class UserService {
     return HttpStatus.OK;
   }
 
-  async removeFriend(
-    id: mongoose.Types.ObjectId,
-    friendId: mongoose.Types.ObjectId,
-  ) {
+  async removeFriend(id: string, friendId: string) {
     const user = await this.userModel.findById(id);
     const friend = await this.userModel.findById(friendId);
     if (!user) {
@@ -186,8 +177,8 @@ export class UserService {
   }
 
   async answerNotification(
-    userId: mongoose.Types.ObjectId,
-    notificationId: string,
+    userId: string,
+    notificationId: string, // nanoid.
     answer: boolean,
   ) {
     const user = await this.userModel.findById(userId);
@@ -216,11 +207,8 @@ export class UserService {
     return HttpStatus.OK;
   }
 
-  async update(
-    id: number | mongoose.Types.ObjectId,
-    updateUserDto: UpdateUserDto,
-  ) {
-    if (!(await this.userModel.findById(id))) {
+  async update(userId: string, updateUserDto: UpdateUserDto) {
+    if (!(await this.userModel.findById(userId))) {
       throw new NotFoundException('User not found');
     }
     // if (updateUserDto.password) {
@@ -229,15 +217,15 @@ export class UserService {
     //     bcryptConstants.salt,
     //   );
     // }
-    await this.userModel.findByIdAndUpdate(id, updateUserDto);
+    await this.userModel.findByIdAndUpdate(userId, updateUserDto);
     return HttpStatus.OK;
   }
 
-  async remove(id: mongoose.Types.ObjectId) {
-    if (!(await this.userModel.findById(id))) {
+  async remove(userId: string) {
+    if (!(await this.userModel.findById(userId))) {
       throw new NotFoundException('User not found');
     }
-    await this.userModel.findByIdAndDelete(id);
+    await this.userModel.findByIdAndDelete(userId);
     return HttpStatus.OK;
   }
 }

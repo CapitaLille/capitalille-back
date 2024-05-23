@@ -15,10 +15,10 @@ export class User {
   nickname: string;
 
   @Prop({ required: true, default: [] })
-  lobbys: mongoose.Types.ObjectId[];
+  lobbys: string[];
 
   @Prop({ required: true, default: [] })
-  friends: mongoose.Types.ObjectId[];
+  friends: string[];
 
   @Prop({ required: true, default: 0 })
   credit: number;
@@ -33,11 +33,11 @@ export class User {
 @Schema()
 export class Notification {
   @Prop({ required: true })
-  uid: string;
+  uid: string; // nanoid 20.
   @Prop({ required: true })
-  from: mongoose.Types.ObjectId;
+  from: string;
   @Prop({ required: false, default: '' })
-  attached: mongoose.Types.ObjectId;
+  attached: string;
   @Prop({ required: true })
   type:
     | 'gameInvite'

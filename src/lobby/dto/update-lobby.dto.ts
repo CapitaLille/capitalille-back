@@ -3,5 +3,5 @@ import { CreateLobbyDto } from './create-lobby.dto';
 import mongoose from 'mongoose';
 
 export class UpdateLobbyDto extends PartialType(CreateLobbyDto) {
-  users: mongoose.Types.ObjectId[];
+  users: string[];
 }
