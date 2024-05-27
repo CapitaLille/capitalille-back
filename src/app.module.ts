@@ -11,6 +11,7 @@ import { PlayerModule } from './player/player.module';
 import { MapModule } from './map/map.module';
 import { HouseModule } from './house/house.module';
 import { ServerModule } from './server/server.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ServerModule } from './server/server.module';
       isGlobal: true,
       cache: true,
     }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGODB_URL),
     UserModule,
     AuthModule,

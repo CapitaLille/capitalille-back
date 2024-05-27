@@ -33,6 +33,8 @@ import {
 } from './server.type';
 import { House } from 'src/house/house.schema';
 import { nanoid } from 'nanoid';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 
 @Injectable()
 /**
@@ -44,6 +46,7 @@ export class ServerService {
     private readonly lobbyService: LobbyService,
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
+    private schedulerRegistry: SchedulerRegistry,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -311,8 +314,8 @@ export class ServerService {
     for (let i = 0; i < map.configuration.playerRange; i++) {
       nearestCases.push(...next);
       nearestCases.push(...last);
-      let newNext = [];
-      let newLast = [];
+      const newNext = [];
+      const newLast = [];
       for (let j = 0; j < next.length; j++) {
         newNext.push(...cases[next[j]].next);
       }
@@ -477,4 +480,25 @@ export class ServerService {
       );
     }
   }
+
+  // async createCronJob(lobby: Doc<Lobby>) {
+  //   const startTime = lobby.startTime;
+  //   const roundTime = lobby.turnSchedule;
+
+  //   const startTimeDate = new Date(lobby.startTime);
+  //   const initialDelay = startTimeDate.getTime() - Date.now();
+  //   const interval = lobby.turnSchedule * 1000;  // interval in milliseconds
+
+  //   setTimeout(() => {
+  //     this.scheduleCronJob(id, message, interval);
+  //   }, initialDelay);
+
+  //   const hours = startTimeDate.getHours();
+
+  //   this.schedulerRegistry.addCronJob(name, job);
+  //   job.start();
+
+  //   this.logger.warn(
+  //     `job ${name} added for each minute at ${seconds} seconds!`,
+  //   );
 }

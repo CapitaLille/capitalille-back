@@ -4,6 +4,7 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -41,13 +42,19 @@ export type ServerGuardSocket = Socket & {
 };
 
 @WebSocketGateway({ cors: true })
-export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ServerGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   constructor(
     private readonly houseService: HouseService,
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
+
+  afterInit(server: any) {
+    throw new Error('Method not implemented.');
+  }
 
   handleConnection(client: any, ...args: any[]) {}
 
