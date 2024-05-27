@@ -15,7 +15,7 @@ export class House {
   rent: [number, number, number, number]; // rent price house 1, house 2, hostel 1, hostel 2
 
   @Prop({ required: true })
-  case: number;
+  cases: number[];
 
   @Prop({ required: true, type: [Number] })
   coordinates: [number, number];
@@ -39,15 +39,15 @@ export class Case {
 }
 
 export enum CaseType {
-  metro,
-  bus,
-  bank,
-  park,
-  event,
-  default,
-  house,
-  intersection,
-  monuments,
+  METRO = 'metro',
+  BUS = 'bus',
+  BANK = 'bank',
+  PARK = 'park',
+  EVENT = 'event',
+  START = 'start',
+  HOUSE = 'house',
+  INTERSECTION = 'intersection',
+  MONUMENTS = 'monuments',
 }
 
 export const CaseConfigSchema = SchemaFactory.createForClass(Case);
@@ -68,6 +68,9 @@ export class Configuration {
 
   @Prop({ required: true, type: { tax: Number, value: Number } })
   bank: { tax: number; value: number };
+
+  @Prop({ required: false, default: 50000 })
+  diplomeBonus: number;
 
   @Prop({ required: true })
   maxPlayer: number;
@@ -96,6 +99,12 @@ export class Configuration {
 
   @Prop({ required: false, default: 0 })
   price: number;
+
+  @Prop({ required: false, default: 3 })
+  playerRange: number;
+
+  @Prop({ required: false, default: 10 })
+  auctionStepPourcent: number; // 0 to 100
 }
 
 export const ConfigurationSchema = SchemaFactory.createForClass(Configuration);

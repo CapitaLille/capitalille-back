@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateLobbyDto } from './dto/create-lobby.dto';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -97,16 +102,16 @@ export class LobbyService {
     const user = await this.userService.findOne(userId);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
     if (!lobby) {
-      throw new Error('Lobby not found');
+      throw new NotFoundException('Lobby not found');
     }
     if (lobby.users.length >= lobby.maxPlayers) {
-      throw new Error('Lobby is full');
+      throw new ForbiddenException('Lobby is full');
     }
     if (user.lobbys.includes(lobbyId)) {
-      throw new Error('User already in lobby');
+      throw new ForbiddenException('User already in lobby');
     }
     const session = await this.connection.startSession();
     try {
@@ -131,16 +136,16 @@ export class LobbyService {
     const user = await this.userService.findOne(userId);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
     if (!lobby) {
-      throw new Error('Lobby not found');
+      throw new NotFoundException('Lobby not found');
     }
     if (!user.lobbys.includes(lobbyId)) {
-      throw new Error('User not in lobby');
+      throw new ForbiddenException('User not in lobby');
     }
     if (userId === lobby.owner) {
-      throw new Error('Owner cannot leave lobby');
+      throw new ForbiddenException('Owner cannot leave lobby');
     }
     const session = await this.connection.startSession();
     try {

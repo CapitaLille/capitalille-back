@@ -32,11 +32,19 @@ export class Transaction {
   @Prop({ required: true })
   amount: number;
   @Prop({ required: true })
-  from: string;
+  playerId: string;
   @Prop({ required: true })
-  to: string;
-  @Prop({ required: true })
-  type: string;
+  type: transactionType;
+}
+
+export enum transactionType {
+  RENT = 'rent',
+  BUY = 'buy',
+  SELL = 'sell',
+  LOAN = 'loan',
+  SALARY = 'salary',
+  ACTION = 'action',
+  AUCTION = 'auction',
 }
 
 export enum playerVaultType {
@@ -47,6 +55,7 @@ export enum playerVaultType {
   forward3,
   backward3,
   loan,
+  diploma,
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);

@@ -2,9 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLobbyHousesDto } from './dto/create-lobby-houses.dto';
 import { UpdateHouseDto } from './dto/update-house.dto';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import mongoose, { ClientSession, Model, startSession } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { House } from './house.schema';
-import { LobbyService } from 'src/lobby/lobby.service';
 import { Lobby } from 'src/lobby/lobby.schema';
 
 @Injectable()
@@ -21,7 +20,9 @@ export class HouseService {
       session.startTransaction();
       const lobby = await this.lobbyModel.findById(createLobbyHousesDto.lobby);
       if (!lobby) {
-        throw new Error("Can't generate houses for a non-existing lobby");
+        throw new NotFoundException(
+          "Can't generate houses for a non-existing lobby",
+        );
       }
       let promises = [];
       for (let i = 0; i < createLobbyHousesDto.map.houses.length; i++) {
@@ -111,6 +112,13 @@ export class HouseService {
 
   async findAll() {
     return await this.houseModel.find();
+  }
+
+  async findByIdAndUpdate(
+    houseId: string,
+    updateHouseDto: mongoose.UpdateQuery<House>,
+  ): Promise<House> {
+    return await this.houseModel.findByIdAndUpdate(houseId, updateHouseDto);
   }
 
   async findOne(lobbyId: string, houseIndex: any) {

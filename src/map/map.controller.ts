@@ -25,6 +25,17 @@ export class MapController {
     return await this.mapService.create(createMapDto);
   }
 
+  @Post('fake')
+  async fake() {
+    console.log('create fake map');
+    return await this.mapService.createFake();
+  }
+
+  @Get()
+  async findAll() {
+    return await this.mapService.findAll();
+  }
+
   @Get(':id')
   findOne(@Param('id') mapId: string) {
     return this.mapService.findOne(mapId);

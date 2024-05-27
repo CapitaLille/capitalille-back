@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { ForbiddenException, UseGuards } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -14,7 +14,13 @@ import { ServerGuard } from './server.guard';
 import { Socket } from 'socket.io';
 import { LobbyService } from 'src/lobby/lobby.service';
 import { Observable } from 'rxjs';
-import { GameError, GameEvent, GameResponse } from './server.type';
+import {
+  AuctionData,
+  Bank,
+  GameError,
+  GameEvent,
+  GameResponse,
+} from './server.type';
 import e from 'express';
 import { HouseService } from 'src/house/house.service';
 import { PlayerService } from 'src/player/player.service';
@@ -22,6 +28,7 @@ import { MapService } from 'src/map/map.service';
 import { InjectConnection } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { ServerService } from './server.service';
+import { transactionType } from 'src/player/player.schema';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -36,29 +43,27 @@ export type ServerGuardSocket = Socket & {
 @WebSocketGateway({ cors: true })
 export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
-    private readonly lobbyService: LobbyService,
     private readonly houseService: HouseService,
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
-    private readonly mapService: MapService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
-  handleConnection(client: any, ...args: any[]) {
-    console.log('client connected', client.id);
-  }
+  handleConnection(client: any, ...args: any[]) {}
 
   handleDisconnect(client: any) {
-    console.log('client disconnected', client.id);
+    this.serverService.removeSocketId(undefined, client.id);
   }
 
   @UseGuards(ServerGuard)
-  @SubscribeMessage('suscribe')
+  @SubscribeMessage('subscribe')
   async suscribe(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
   ) {
+    console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     this.serverService.setSocketId(socket.handshake.user.sub, socket.id);
+    socket.join(data.lobbyId);
   }
 
   @UseGuards(ServerGuard)
@@ -69,7 +74,7 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const userId = socket.handshake.user.sub;
     try {
-      this.serverService.gameSession(
+      await this.serverService.gameSession(
         data.lobbyId,
         userId,
         async (lobby, player, map) => {
@@ -88,15 +93,16 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async playTurn(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
-  ): Promise<WsResponse<any>> {
+  ) {
+    console.log('playTurn', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
-      this.serverService.gameSession(
+      await this.serverService.gameSession(
         data.lobbyId,
         userId,
         async (lobby, player, map) => {
           if (player.turnPlayed) {
-            throw new Error('Player already played his turn');
+            throw new ForbiddenException('Player already played his turn');
           }
           const dice = this.serverService.generateDice(player);
           const { path, salary, newPlayer } =
@@ -111,14 +117,102 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @UseGuards(ServerGuard)
-  @SubscribeMessage('try')
-  startQuiz(
+  @SubscribeMessage('makeAuction')
+  async makeAuction(
     @ConnectedSocket() socket: ServerGuardSocket,
-    @MessageBody() data: { partyId: string },
-  ): string {
-    // console.log('socket', socket.handshake.user);
-    const event = 'events';
-    const response = [1, 2, 3];
-    return 'Hello world!';
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          const nearestCases = this.serverService.getNearestCases(
+            map,
+            player.casePosition,
+          );
+          if (
+            !nearestCases.some((element) =>
+              map.houses[data.houseIndex].cases.includes(element),
+            )
+          ) {
+            throw new ForbiddenException(
+              'House is too far away, nearest : ' +
+                nearestCases.join(', ') +
+                '. Player pos : ' +
+                player.casePosition +
+                '. House pos : ' +
+                map.houses[data.houseIndex].cases.join(','),
+            );
+          }
+          if (house.state !== 'free' && house.state !== 'sale') {
+            throw new ForbiddenException('House is not for sale');
+          }
+          const actualAuction = house.auction;
+          const newAuction = this.serverService.getAuctionPrice(map, house);
+
+          let promises = [];
+
+          if (house.next_owner !== '') {
+            console.log('refund', house.next_owner, house.auction);
+            promises.push(
+              this.serverService.playerMoneyTransaction(
+                house.auction,
+                Bank.id,
+                house.next_owner,
+                transactionType.AUCTION,
+                socket,
+              ),
+            );
+          }
+          promises.push(
+            this.serverService.playerMoneyTransaction(
+              newAuction,
+              player.id,
+              Bank.id,
+              transactionType.AUCTION,
+              socket,
+            ),
+          );
+          await Promise.all(promises);
+
+          const targetSocketId = await this.serverService.getSocketId(
+            house.next_owner,
+          );
+
+          promises = [];
+          promises.push(
+            this.houseService.findByIdAndUpdate(house.id, {
+              next_owner: player.id,
+              auction: newAuction,
+            }),
+          );
+          promises.push(
+            socket
+              .to(targetSocketId)
+              .emit(
+                GameEvent.LOSE_AUCTION,
+                new AuctionData(data.houseIndex, player.id, newAuction),
+              ),
+          );
+          promises.push(
+            socket
+              .to(lobby.id)
+              .emit(
+                GameEvent.AUCTION,
+                new AuctionData(data.houseIndex, userId, newAuction),
+              ),
+          );
+          await Promise.all(promises);
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
   }
 }
