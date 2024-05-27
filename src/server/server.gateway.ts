@@ -105,8 +105,10 @@ export class ServerGateway implements OnGatewayConnection, OnGatewayDisconnect {
             throw new ForbiddenException('Player already played his turn');
           }
           const dice = this.serverService.generateDice(player);
+          console.log(dice);
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice, map, player);
+          console.log(path, salary, newPlayer);
           await this.serverService.mandatoryAction(map, newPlayer, socket);
           socket.emit(GameEvent.PLAY_TURN, { path, salary });
         },

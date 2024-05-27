@@ -226,29 +226,34 @@ export class ServerService {
     socket: ServerGuardSocket,
   ) {
     const type = map.cases[player.casePosition].type;
-    switch (type) {
-      case CaseType.BANK:
-        if (player.bonuses.includes(playerVaultType.loan)) {
-          // Pay the loan
-        }
-      case CaseType.HOUSE:
-        const house = await this.houseService.findWithCase(
-          player.casePosition,
-          player.lobby,
-        );
-        if (!player.houses.includes(house.index)) {
-          const cost = house.rent[house.level];
-          // Pay rent
-          await this.playerMoneyTransaction(
-            cost,
-            player,
-            house.owner,
-            transactionType.RENT,
-            socket,
-            true,
-            false,
+    try {
+      switch (type) {
+        case CaseType.BANK:
+          if (player.bonuses.includes(playerVaultType.loan)) {
+            // Pay the loan
+          }
+        case CaseType.HOUSE:
+          const house = await this.houseService.findWithCase(
+            player.casePosition,
+            player.lobby,
           );
-        }
+          if (house.owner !== player.id && house.owner !== '') {
+            const cost = house.rent[house.level];
+            // Pay rent
+            await this.playerMoneyTransaction(
+              cost,
+              player,
+              house.owner,
+              transactionType.RENT,
+              socket,
+              true,
+              false,
+            );
+          }
+      }
+    } catch (error) {
+      console.error('mandatoryAction : ' + error.message);
+      throw new NotImplementedException('mandatoryAction : ' + error.message);
     }
   }
 
