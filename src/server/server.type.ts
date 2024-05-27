@@ -1,4 +1,6 @@
 import e from 'express';
+import mongoose from 'mongoose';
+import { transactionType } from 'src/player/player.schema';
 
 export class GameError<T> {
   event: string;
@@ -25,10 +27,46 @@ export enum GameEvent {
   ERROR = 'error',
   GET_PARTY = 'getParty',
   PLAY_TURN = 'playTurn',
-  TRY = 'try',
+  MONEY_CHANGE = 'moneyChange',
+  AUCTION = 'auction',
+  LOSE_AUCTION = 'loseAuction',
 }
 
 export interface PlayerSocketId {
   playerId: string;
   socketId: string;
 }
+
+export class MoneyChangeData {
+  from: string | 'bank';
+  to: string | 'bank';
+  amount: number;
+  type: transactionType;
+
+  constructor(from: string, to: string, amount: number, type: transactionType) {
+    this.from = from;
+    this.to = to;
+    this.amount = amount;
+    this.type = type;
+  }
+}
+
+export class AuctionData {
+  houseIndex: number;
+  playerId: string;
+  newAuction: number;
+  constructor(houseIndex: number, playerId: string, newAuction: number) {
+    this.houseIndex = houseIndex;
+    this.playerId = playerId;
+    this.newAuction = newAuction;
+  }
+}
+
+export class Bank {
+  static id = 'bank';
+}
+
+export type Doc<T> = mongoose.Document<unknown, {}, T> &
+  T & {
+    _id: mongoose.Types.ObjectId;
+  };

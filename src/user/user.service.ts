@@ -89,17 +89,21 @@ export class UserService {
     if (user.friends.includes(friendId) || friend.friends.includes(id)) {
       throw new ConflictException('Friend already added');
     }
-
-    user.friends.push(friendId);
-    friend.friends.push(id);
-
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
 
       const operations = [];
-      operations.push(user.save());
-      operations.push(friend.save());
+      operations.push(
+        this.userModel.findByIdAndUpdate(user.id, {
+          $push: { friends: friendId },
+        }),
+      );
+      operations.push(
+        this.userModel.findByIdAndUpdate(friend.id, {
+          $push: { friends: id },
+        }),
+      );
       await Promise.all(operations);
 
       await session.commitTransaction();
@@ -125,29 +129,28 @@ export class UserService {
     if (!user.friends.includes(friendId) || !friend.friends.includes(id)) {
       throw new ConflictException('These users are not friends');
     }
-
-    user.friends.splice(user.friends.indexOf(friendId), 1);
-    friend.friends.splice(friend.friends.indexOf(id), 1);
-
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
 
-      // Vos opérations MongoDB ici
-      // Exemple :
       const operations = [];
-      operations.push(user.save());
-      operations.push(friend.save());
+      operations.push(
+        this.userModel.findByIdAndUpdate(user.id, {
+          $pull: { friends: friendId },
+        }),
+      );
+      operations.push(
+        this.userModel.findByIdAndUpdate(friend.id, {
+          $pull: { friends: id },
+        }),
+      );
       await Promise.all(operations);
 
-      // Si toutes les opérations réussissent, commit la transaction
       await session.commitTransaction();
     } catch (error) {
-      // Si une opération échoue, annule la transaction
       await session.abortTransaction();
       throw error; // Optionnel : relancez l'erreur pour la gérer plus haut
     } finally {
-      // Fermez la session
       session.endSession();
     }
 
@@ -171,8 +174,9 @@ export class UserService {
       date: new Date(),
       read: false,
     };
-    to.notifications.push(newNotification);
-    await to.save();
+    await this.userModel.findByIdAndUpdate(to.id, {
+      $push: { notifications: newNotification },
+    });
     return HttpStatus.OK;
   }
 
@@ -202,8 +206,9 @@ export class UserService {
       default:
         throw new ConflictException('Invalid notification type');
     }
-    user.notifications.find((n) => n.uid === notificationId).read = true;
-    await user.save();
+    await this.userModel.findByIdAndUpdate(userId, {
+      notifications: user.notifications,
+    });
     return HttpStatus.OK;
   }
 

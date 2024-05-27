@@ -1,17 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { HouseService } from './house.service';
-import mongoose from 'mongoose';
-import { IsDefined } from 'class-validator';
-import { ObjectId } from 'mongodb';
-import { idDto } from 'src/app.dto';
+
 @Controller('house')
 export class HouseController {
   constructor(private readonly houseService: HouseService) {}
