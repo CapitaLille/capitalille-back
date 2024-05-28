@@ -3,6 +3,12 @@ import mongoose, { HydratedDocument } from 'mongoose';
 
 export type HouseDocument = HydratedDocument<House>;
 
+export enum houseState {
+  FREE = 'free',
+  SALE = 'sale',
+  OWNED = 'owned',
+}
+
 @Schema()
 export class House {
   @Prop({ required: true })
@@ -15,7 +21,7 @@ export class House {
   owner: string;
 
   @Prop({ required: false, default: '' })
-  next_owner: string;
+  nextOwner: string;
 
   @Prop({ required: true })
   auction: number;
@@ -29,8 +35,8 @@ export class House {
   @Prop({ required: false, default: 0 })
   level: 0 | 1 | 2 | 3; // 0: house 1, 1: house 2, 2: hostel 1, 3: hostel 2
 
-  @Prop({ required: false, default: 'free' })
-  state: 'free' | 'sale' | 'owned';
+  @Prop({ required: false, default: houseState.FREE })
+  state: houseState;
 
   @Prop({
     required: true,

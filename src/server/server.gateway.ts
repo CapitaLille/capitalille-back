@@ -1,4 +1,8 @@
-import { ForbiddenException, UseGuards } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -13,8 +17,7 @@ import {
 } from '@nestjs/websockets';
 import { ServerGuard } from './server.guard';
 import { Socket } from 'socket.io';
-import { LobbyService } from 'src/lobby/lobby.service';
-import { Observable } from 'rxjs';
+import { Server } from 'socket.io';
 import {
   AuctionData,
   Bank,
@@ -30,6 +33,8 @@ import { InjectConnection } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { ServerService } from './server.service';
 import { transactionType } from 'src/player/player.schema';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SchedulerService } from './scheduler.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -49,11 +54,13 @@ export class ServerGateway
     private readonly houseService: HouseService,
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
+    private readonly mapService: MapService,
+    private readonly schedulerService: SchedulerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
-  afterInit(server: any) {
-    throw new Error('Method not implemented.');
+  afterInit(server: Server) {
+    this.schedulerService.scheduleLobbies(server);
   }
 
   handleConnection(client: any, ...args: any[]) {}
@@ -84,6 +91,7 @@ export class ServerGateway
       await this.serverService.gameSession(
         data.lobbyId,
         userId,
+        socket,
         async (lobby, player, map) => {
           const players = await this.playerService.findAllFromLobby(lobby.id);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
@@ -107,16 +115,21 @@ export class ServerGateway
       await this.serverService.gameSession(
         data.lobbyId,
         userId,
+        socket,
         async (lobby, player, map) => {
           if (player.turnPlayed) {
             throw new ForbiddenException('Player already played his turn');
           }
           const dice = this.serverService.generateDice(player);
-          console.log(dice);
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice, map, player);
           console.log(path, salary, newPlayer);
-          await this.serverService.mandatoryAction(map, newPlayer, socket);
+          await this.serverService.mandatoryAction(
+            map,
+            newPlayer,
+            false,
+            socket,
+          );
           socket.emit(GameEvent.PLAY_TURN, { path, salary });
         },
       );
@@ -136,12 +149,13 @@ export class ServerGateway
       await this.serverService.gameSession(
         data.lobbyId,
         userId,
+        socket,
         async (lobby, player, map) => {
           const house = await this.houseService.findOne(
             lobby.id,
             data.houseIndex,
           );
-          const nearestCases = this.serverService.getNearestCases(
+          const nearestCases = this.mapService.getNearestCases(
             map,
             player.casePosition,
           );
@@ -150,6 +164,9 @@ export class ServerGateway
               map.houses[data.houseIndex].cases.includes(element),
             )
           ) {
+            socket.emit(GameEvent.ERROR, {
+              message: 'House is too far away',
+            });
             throw new ForbiddenException(
               'House is too far away, nearest : ' +
                 nearestCases.join(', ') +
@@ -160,20 +177,28 @@ export class ServerGateway
             );
           }
           if (house.state !== 'free' && house.state !== 'sale') {
+            socket.emit(GameEvent.ERROR, {
+              message: 'House is not for sale',
+            });
             throw new ForbiddenException('House is not for sale');
           }
           const actualAuction = house.auction;
           const newAuction = this.serverService.getAuctionPrice(map, house);
-
+          if (player.money < newAuction) {
+            socket.emit(GameEvent.ERROR, {
+              message: 'Player does not have enough money',
+            });
+            throw new ForbiddenException('Player does not have enough money');
+          }
           let promises = [];
 
-          if (house.next_owner !== '') {
-            console.log('refund', house.next_owner, house.auction);
+          if (house.nextOwner !== '') {
+            console.log('refund', house.nextOwner, house.auction);
             promises.push(
               this.serverService.playerMoneyTransaction(
                 house.auction,
                 Bank.id,
-                house.next_owner,
+                house.nextOwner,
                 transactionType.AUCTION,
                 socket,
               ),
@@ -191,13 +216,13 @@ export class ServerGateway
           await Promise.all(promises);
 
           const targetSocketId = await this.serverService.getSocketId(
-            house.next_owner,
+            house.nextOwner,
           );
 
           promises = [];
           promises.push(
             this.houseService.findByIdAndUpdate(house.id, {
-              next_owner: player.id,
+              nextOwner: player.id,
               auction: newAuction,
             }),
           );
@@ -205,7 +230,7 @@ export class ServerGateway
             socket
               .to(targetSocketId)
               .emit(
-                GameEvent.LOSE_AUCTION,
+                GameEvent.LOST_AUCTION,
                 new AuctionData(data.houseIndex, player.id, newAuction),
               ),
           );

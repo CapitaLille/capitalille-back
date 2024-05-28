@@ -4,6 +4,7 @@ import { UpdateMapDto } from './dto/update-map.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { CaseType, Map } from './map.schema';
 import mongoose, { Model } from 'mongoose';
+import { Doc } from 'src/server/server.type';
 
 @Injectable()
 export class MapService {
@@ -166,5 +167,34 @@ export class MapService {
 
   async findAll() {
     return await this.mapModel.find();
+  }
+
+  /**
+   * Get accessible cases from a player position for a specific map.
+   * @param map
+   * @param playerPosition
+   * @returns
+   */
+  getNearestCases(map: Doc<Map>, playerPosition: number): number[] {
+    const cases = map.cases;
+    const nearestCases = [playerPosition];
+    let next = cases[playerPosition].next;
+    let last = cases[playerPosition].last;
+
+    for (let i = 0; i < map.configuration.playerRange; i++) {
+      nearestCases.push(...next);
+      nearestCases.push(...last);
+      const newNext = [];
+      const newLast = [];
+      for (let j = 0; j < next.length; j++) {
+        newNext.push(...cases[next[j]].next);
+      }
+      for (let j = 0; j < last.length; j++) {
+        newLast.push(...cases[last[j]].last);
+      }
+      next = newNext;
+      last = newLast;
+    }
+    return nearestCases;
   }
 }

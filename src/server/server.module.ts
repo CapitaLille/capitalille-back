@@ -15,6 +15,7 @@ import { PlayerSchema } from 'src/player/player.schema';
 import { MapSchema } from 'src/map/map.schema';
 import { HouseSchema } from 'src/house/house.schema';
 import { ServerService } from './server.service';
+import { SchedulerService } from './scheduler.service';
 
 @Module({
   providers: [
@@ -24,6 +25,7 @@ import { ServerService } from './server.service';
     UserService,
     LobbyService,
     PlayerService,
+    SchedulerService,
     MapService,
     HouseService,
   ],

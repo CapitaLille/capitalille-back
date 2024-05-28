@@ -10,11 +10,12 @@ import {
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, UpdateQuery } from 'mongoose';
-import { Player, transactionType } from './player.schema';
+import { Player, playerVaultType, transactionType } from './player.schema';
 import { lobbyConstants } from 'src/user/constants';
 import { Bank, Doc, GameEvent, MoneyChangeData } from 'src/server/server.type';
 import { ServerService } from 'src/server/server.service';
 import { ServerGuardSocket } from 'src/server/server.gateway';
+import { Map } from 'src/map/map.schema';
 
 @Injectable()
 export class PlayerService {
@@ -69,5 +70,20 @@ export class PlayerService {
 
   deleteAllFromLobby(lobbyId: string): Promise<any> {
     return this.playerModel.deleteMany({ lobby: lobbyId });
+  }
+
+  /**
+   * Calculate the player salary based on the player bonuses and the map configuration.
+   * @param player
+   * @param map
+   * @returns
+   */
+  getPlayerSalary(player: Doc<Player>, map: Doc<Map>): number {
+    const diplomeCount = player.bonuses.filter(
+      (bonus) => bonus === playerVaultType.diploma,
+    ).length;
+    return (
+      map.configuration.salary + map.configuration.diplomeBonus * diplomeCount
+    );
   }
 }

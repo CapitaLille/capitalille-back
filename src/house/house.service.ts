@@ -110,6 +110,15 @@ export class HouseService {
     return houses;
   }
 
+  async findAllSellingFromLobby(lobbyId: string) {
+    return await this.houseModel
+      .find({
+        lobby: lobbyId,
+        state: { $ne: 'owned' },
+      })
+      .exec();
+  }
+
   async findAll() {
     return await this.houseModel.find();
   }
