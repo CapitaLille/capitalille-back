@@ -29,7 +29,10 @@ export enum GameEvent {
   PLAY_TURN = 'playTurn',
   MONEY_CHANGE = 'moneyChange',
   AUCTION = 'auction',
-  LOSE_AUCTION = 'loseAuction',
+  LOST_AUCTION = 'loseAuction',
+  LOST_GAME = 'loseGame',
+  NEXT_TURN = 'nextTurn',
+  END_GAME = 'endGame',
 }
 
 export interface PlayerSocketId {

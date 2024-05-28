@@ -10,7 +10,6 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { cp } from 'fs';
 import mongoose, { Model } from 'mongoose';
 import { HouseService } from 'src/house/house.service';
 import { Lobby } from 'src/lobby/lobby.schema';
@@ -22,6 +21,7 @@ import {
   playerVaultType,
   transactionType,
 } from 'src/player/player.schema';
+import { Server } from 'socket.io';
 import { PlayerService } from 'src/player/player.service';
 import { ServerGuardSocket } from './server.gateway';
 import {
@@ -31,7 +31,7 @@ import {
   MoneyChangeData,
   PlayerSocketId,
 } from './server.type';
-import { House } from 'src/house/house.schema';
+import { House, houseState } from 'src/house/house.schema';
 import { nanoid } from 'nanoid';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
@@ -46,7 +46,6 @@ export class ServerService {
     private readonly lobbyService: LobbyService,
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
-    private schedulerRegistry: SchedulerRegistry,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -99,6 +98,7 @@ export class ServerService {
   async gameSession(
     lobbyId: string,
     userId: string,
+    socket: ServerGuardSocket | Server,
     run: (
       lobby: Doc<Lobby>,
       player: Doc<Player>,
@@ -115,6 +115,13 @@ export class ServerService {
       const player = await this.playerService.findOne(userId, lobbyId);
       if (!player) {
         throw new NotFoundException('Player not found');
+      }
+      if (player.lost) {
+        const targetSocketId = await this.getSocketId(player.user);
+        socket
+          .to(targetSocketId)
+          .emit(GameEvent.LOST_GAME, { message: 'You lost' });
+        throw new ForbiddenException('Player has lost');
       }
       const map = await this.mapService.findOne(lobby.map);
       if (!map) {
@@ -190,9 +197,14 @@ export class ServerService {
     const path: Case[] = [map.cases[player.casePosition]];
     let totalEarnThisTurn = 0;
     const playerSalary =
-      this.ratingMultiplicator(player, map) * this.getPlayerSalary(player, map);
+      this.ratingMultiplicator(player, map) *
+      this.playerService.getPlayerSalary(player, map);
     for (let i = 0; i < dice; i++) {
-      if (path[path.length - 1].type === CaseType.INTERSECTION) {
+      if (
+        [CaseType.INTERSECTION, CaseType.START].includes(
+          path[path.length - 1].type,
+        )
+      ) {
         totalEarnThisTurn += playerSalary;
         const direction = Math.round(Math.random());
         if (direction === 0) {
@@ -226,33 +238,64 @@ export class ServerService {
   async mandatoryAction(
     map: Doc<Map>,
     player: Doc<Player>,
-    socket: ServerGuardSocket,
+    forceChoice: boolean,
+    socket: ServerGuardSocket | Server,
   ) {
     const type = map.cases[player.casePosition].type;
     try {
       switch (type) {
         case CaseType.BANK:
           if (player.bonuses.includes(playerVaultType.loan)) {
-            // Pay the loan
-          }
-        case CaseType.HOUSE:
-          const house = await this.houseService.findWithCase(
-            player.casePosition,
-            player.lobby,
-          );
-          if (house.owner !== player.id && house.owner !== '') {
-            const cost = house.rent[house.level];
-            // Pay rent
+            const loanValue =
+              map.configuration.bank.value +
+              map.configuration.bank.tax *
+                this.ratingMultiplicator(player, map) *
+                map.configuration.bank.value;
             await this.playerMoneyTransaction(
-              cost,
-              player,
-              house.owner,
-              transactionType.RENT,
+              loanValue,
+              player.id,
+              Bank.id,
+              transactionType.LOAN_REPAY,
               socket,
               true,
-              false,
             );
+            await this.playerService.findByIdAndUpdate(player.id, {
+              $pull: { bonuses: playerVaultType.loan },
+              turnPlayed: true,
+              actionPlayed: true,
+            });
           }
+          break;
+        case CaseType.HOUSE:
+          if (forceChoice) {
+            // If it's a forced choice, player pay the house rent.
+            const house = await this.houseService.findWithCase(
+              player.casePosition,
+              player.lobby,
+            );
+            if (house.owner !== player.id && house.owner !== '') {
+              const cost = house.rent[house.level];
+              // Pay rent
+              await this.playerMoneyTransaction(
+                cost,
+                player,
+                house.owner,
+                transactionType.RENT,
+                socket,
+                true,
+              );
+            }
+            await this.playerService.findByIdAndUpdate(player.id, {
+              turnPlayed: true,
+              actionPlayed: true,
+            });
+          }
+          break;
+        default:
+          await this.playerService.findByIdAndUpdate(player.id, {
+            turnPlayed: true,
+            actionPlayed: true,
+          });
       }
     } catch (error) {
       console.error('mandatoryAction : ' + error.message);
@@ -263,16 +306,7 @@ export class ServerService {
   /**
    * Calculate multiplicator base on the player rating and the map configuration.
    */
-  ratingMultiplicator(
-    player: mongoose.Document<unknown, {}, Player> &
-      Player & {
-        _id: mongoose.Types.ObjectId;
-      },
-    map: mongoose.Document<unknown, {}, Map> &
-      Map & {
-        _id: mongoose.Types.ObjectId;
-      },
-  ): number {
+  ratingMultiplicator(player: Doc<Player>, map: Doc<Map>): number {
     const rating = player.rating; // Rating 0-5 (2.5 Normal)
     const multiplicator = map.configuration.ratingMultiplicator; // [0.8, 1.2]
     const multiplicatorRange = multiplicator[1] - multiplicator[0]; // 0.4
@@ -281,53 +315,12 @@ export class ServerService {
     return ratingMultiplicator;
   }
 
-  getPlayerSalary(
-    player: mongoose.Document<unknown, {}, Player> &
-      Player & {
-        _id: mongoose.Types.ObjectId;
-      },
-    map: mongoose.Document<unknown, {}, Map> &
-      Map & {
-        _id: mongoose.Types.ObjectId;
-      },
-  ): number {
-    const diplomeCount = player.bonuses.filter(
-      (bonus) => bonus === playerVaultType.diploma,
-    ).length;
-    return (
-      map.configuration.salary + map.configuration.diplomeBonus * diplomeCount
-    );
-  }
-
   /**
-   * Get accessible cases from a player position for a specific map.
+   * Get the auction price of a house based on the map configuration.
    * @param map
-   * @param playerPosition
+   * @param house
    * @returns
    */
-  getNearestCases(map: Doc<Map>, playerPosition: number): number[] {
-    const cases = map.cases;
-    const nearestCases = [playerPosition];
-    let next = cases[playerPosition].next;
-    let last = cases[playerPosition].last;
-
-    for (let i = 0; i < map.configuration.playerRange; i++) {
-      nearestCases.push(...next);
-      nearestCases.push(...last);
-      const newNext = [];
-      const newLast = [];
-      for (let j = 0; j < next.length; j++) {
-        newNext.push(...cases[next[j]].next);
-      }
-      for (let j = 0; j < last.length; j++) {
-        newLast.push(...cases[last[j]].last);
-      }
-      next = newNext;
-      last = newLast;
-    }
-    return nearestCases;
-  }
-
   getAuctionPrice(map: Doc<Map>, house: Doc<House>) {
     if (house.auction === 0) {
       return house.price[house.level];
@@ -392,15 +385,16 @@ export class ServerService {
    * @param amount of money to transfer
    * @param type Type of transaction
    * @param socket Socket to emit the transaction
-   * @param announceFromPlayer Announce the transaction from the source player
-   * @param announceToPlayer Announce the transaction to the destination player
+   * @param createTransactionDocument Create a transaction document (default: false)
+   * @param announceFromPlayer Announce the transaction from the source player (default: true)
+   * @param announceToPlayer Announce the transaction to the destination player (default: true)
    */
   async playerMoneyTransaction(
     amount: number,
     fromPlayer: Doc<Player> | string,
     toPlayer: Doc<Player> | string,
     type: transactionType,
-    socket: ServerGuardSocket,
+    socket: ServerGuardSocket | Server,
     createTransactionDocument: boolean = false,
     announceFromPlayer: boolean = true,
     announceToPlayer: boolean = true,
@@ -480,25 +474,4 @@ export class ServerService {
       );
     }
   }
-
-  // async createCronJob(lobby: Doc<Lobby>) {
-  //   const startTime = lobby.startTime;
-  //   const roundTime = lobby.turnSchedule;
-
-  //   const startTimeDate = new Date(lobby.startTime);
-  //   const initialDelay = startTimeDate.getTime() - Date.now();
-  //   const interval = lobby.turnSchedule * 1000;  // interval in milliseconds
-
-  //   setTimeout(() => {
-  //     this.scheduleCronJob(id, message, interval);
-  //   }, initialDelay);
-
-  //   const hours = startTimeDate.getHours();
-
-  //   this.schedulerRegistry.addCronJob(name, job);
-  //   job.start();
-
-  //   this.logger.warn(
-  //     `job ${name} added for each minute at ${seconds} seconds!`,
-  //   );
 }

@@ -15,6 +15,7 @@ import { nanoid } from 'nanoid';
 import { HouseService } from 'src/house/house.service';
 import { MapService } from 'src/map/map.service';
 import { CreateLobbyHousesDto } from 'src/house/dto/create-lobby-houses.dto';
+import { Doc } from 'src/server/server.type';
 
 @Injectable()
 export class LobbyService {
@@ -221,6 +222,17 @@ export class LobbyService {
       throw new NotFoundException('No lobbys found');
     }
     return lobbys;
+  }
+
+  async findAllRunning(): Promise<Doc<Lobby>[]> {
+    return await this.lobbyModel.find({ started: true, turnCount: { $gt: 0 } });
+  }
+
+  async findByIdAndUpdate(
+    lobbyId: string,
+    update: mongoose.UpdateQuery<Lobby>,
+  ) {
+    return await this.lobbyModel.findByIdAndUpdate(lobbyId, update);
   }
 
   async findPrivate(code: string): Promise<

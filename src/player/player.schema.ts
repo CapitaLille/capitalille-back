@@ -25,6 +25,8 @@ export class Player {
   turnPlayed: boolean;
   @Prop({ required: false, default: false })
   actionPlayed: boolean;
+  @Prop({ required: false, default: false })
+  lost: boolean;
 }
 
 @Schema()
@@ -42,9 +44,11 @@ export enum transactionType {
   BUY = 'buy',
   SELL = 'sell',
   LOAN = 'loan',
+  LOAN_REPAY = 'loan_repay',
   SALARY = 'salary',
   ACTION = 'action',
   AUCTION = 'auction',
+  HOUSE_TRANSACTION = 'house_transaction',
 }
 
 export enum playerVaultType {
