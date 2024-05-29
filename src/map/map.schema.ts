@@ -8,6 +8,9 @@ export class House {
   @Prop({ required: true })
   name: string;
 
+  @Prop({ required: true })
+  objectName: string;
+
   @Prop({ required: true, type: [Number] })
   price: [number, number, number, number]; // buy price house 1, upgrade price house 2, hostel 1, hostel 2
 
@@ -126,6 +129,30 @@ export class Configuration {
   auctionStepPourcent: number; // 0 to 100
 }
 
+@Schema()
+export class Monument {
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ required: true, type: [Number] })
+  coordinates: [number, number];
+
+  @Prop({ required: true })
+  objectName: string;
+
+  @Prop({ required: true, type: Number })
+  price: number;
+
+  @Prop({ required: true, type: Number })
+  bonus: number;
+
+  @Prop({ required: true })
+  cases: number[];
+}
+
 export const ConfigurationSchema = SchemaFactory.createForClass(Configuration);
 
 @Schema()
@@ -135,6 +162,9 @@ export class Map {
 
   @Prop({ required: true, type: [CaseConfigSchema] })
   cases: Case[];
+
+  @Prop({ required: true, type: [Monument] })
+  monuments: Monument[];
 
   @Prop({ required: true, type: ConfigurationSchema })
   configuration: Configuration;

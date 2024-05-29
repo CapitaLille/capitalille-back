@@ -14,10 +14,17 @@ import mongoose, { Model } from 'mongoose';
 import { HouseService } from 'src/house/house.service';
 import { Lobby } from 'src/lobby/lobby.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
-import { Case, CaseEventType, CaseType, Map } from 'src/map/map.schema';
+import {
+  Case,
+  CaseEvent,
+  CaseEventType,
+  CaseType,
+  Map,
+} from 'src/map/map.schema';
 import { MapService } from 'src/map/map.service';
 import {
   Player,
+  PlayerEvent,
   playerVaultType,
   transactionType,
 } from 'src/player/player.schema';
@@ -208,9 +215,9 @@ export class ServerService {
   async mandatoryAction(
     map: Doc<Map>,
     playerId: string,
-    forceChoice: boolean,
+    autoPlay: boolean,
     socket: ServerGuardSocket | Server,
-  ) {
+  ): Promise<CaseEventType | GameEvent> {
     const player = await this.playerService.findOneById(playerId);
     const type = map.cases[player.casePosition].type;
     try {
@@ -235,10 +242,11 @@ export class ServerService {
               turnPlayed: true,
               actionPlayed: true,
             });
+            return GameEvent.BANK_LOAN_REFUND;
           }
-          break;
+          return GameEvent.BANK_LOAN_REQUEST;
         case CaseType.HOUSE:
-          if (forceChoice) {
+          if (autoPlay) {
             // If it's a forced choice, player pay the house rent.
             const house = await this.houseService.findWithCase(
               player.casePosition,
@@ -260,20 +268,35 @@ export class ServerService {
               turnPlayed: true,
               actionPlayed: true,
             });
+            return GameEvent.HOUSE_RENT_PAY;
           }
-          break;
-        case CaseType.EVENT: {
+          return GameEvent.HOUSE_RENT_REQUEST;
+        case CaseType.EVENT:
           const event = this.mapService.getRandomEvent();
-          await this.mapEvent(event, player.id, map);
-        }
+          const gameEvent: CaseEventType = await this.mapEvent(
+            event,
+            player.id,
+            autoPlay,
+          );
+          return gameEvent;
+        case CaseType.METRO:
+          return GameEvent.METRO_REQUEST;
+        case CaseType.BUS:
+          return GameEvent.BUS_REQUEST;
+        case CaseType.MONUMENTS:
+          return GameEvent.MONUMENTS_REQUEST;
+        case CaseType.COPS:
+          return GameEvent.COPS_REQUEST;
+        case CaseType.SCHOOL:
+          return GameEvent.SCHOOL_REQUEST;
         default:
           await this.playerService.findByIdAndUpdate(player.id, {
             turnPlayed: true,
             actionPlayed: true,
           });
+          return GameEvent.UNHANDLED_EVENT;
       }
     } catch (error) {
-      console.error('mandatoryAction : ' + error.message);
       throw new NotImplementedException('mandatoryAction : ' + error.message);
     }
   }
@@ -373,11 +396,17 @@ export class ServerService {
     }
   }
 
+  /**
+   *
+   * @param caseEventType
+   * @param playerId
+   * @param map
+   */
   async mapEvent(
     caseEventType: CaseEventType,
     playerId: string,
-    map: Doc<Map>,
-  ) {
+    autoPlay: boolean,
+  ): Promise<CaseEventType> {
     const player = await this.playerService.findOneById(playerId);
     switch (caseEventType) {
       case CaseEventType.DICE_DOUBLE:
@@ -387,14 +416,70 @@ export class ServerService {
         break;
       case CaseEventType.ELECTRICITY_FAILURE:
         await this.houseService.setHouseFailure(player.id, 'electricity');
+        await this.playerService.findByIdAndUpdate(player.id, {
+          turnPlayed: true,
+          actionPlayed: true,
+        });
         break;
       case CaseEventType.FIRE_FAILURE:
         await this.houseService.setHouseFailure(player.id, 'fire');
+        await this.playerService.findByIdAndUpdate(player.id, {
+          turnPlayed: true,
+          actionPlayed: true,
+        });
         break;
       case CaseEventType.WATER_FAILURE:
         await this.houseService.setHouseFailure(player.id, 'water');
+        await this.playerService.findByIdAndUpdate(player.id, {
+          turnPlayed: true,
+          actionPlayed: true,
+        });
+        break;
+      case CaseEventType.RENT_DISCOUNT:
+        await this.playerService.findByIdAndUpdate(player.id, {
+          $push: { bonuses: playerVaultType.rentDiscount },
+          turnPlayed: true,
+          actionPlayed: true,
+        });
         break;
       case CaseEventType.CASINO:
+        if (!autoPlay) {
+          await this.playerService.findByIdAndUpdate(player.id, {
+            $push: { bonuses: playerVaultType.casino_temp },
+          });
+        }
+        break;
+    }
+    return caseEventType;
+  }
+
+  async mapEventAction(
+    caseEventType: PlayerEvent,
+    attachedId: string | number, // Potential houseIndex, playerId, etc.
+    playerId: string,
+    socket: ServerGuardSocket,
+  ) {
+    const player = await this.playerService.findOneById(playerId);
+    if (!player.turnPlayed) {
+      throw new ForbiddenException('You need to play your turn first.');
+    }
+    if (player.lost) {
+      throw new ForbiddenException("You can't play, you lost");
+    }
+    switch (caseEventType) {
+      case PlayerEvent.CASINO_GAMBLE:
+        break;
+      case PlayerEvent.MONUMENTS_PAY:
+        break;
+      case PlayerEvent.COPS_COMPLAINT:
+        break;
+      case PlayerEvent.SCHOOL_PAY:
+        break;
+      case PlayerEvent.BUS_PAY:
+        break;
+      case PlayerEvent.METRO_PAY:
+        break;
+      case PlayerEvent.HOUSE_RENT_PAY:
         break;
     }
   }

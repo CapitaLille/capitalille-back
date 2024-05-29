@@ -76,6 +76,38 @@ export class SchedulerService {
     }
     const map = await this.mapService.findOne(lobby.map);
 
+    const players = await this.playerService.findAllFromLobby(lobby.id);
+    for (const player of players) {
+      if (!player.lost) {
+        if (player.turnPlayed === false) {
+          const dice = this.playerService.generateDice(player);
+          const { newPlayer } = await this.serverService.generatePath(
+            dice.diceValue,
+            map,
+            player,
+          );
+          await this.serverService.mandatoryAction(
+            map,
+            newPlayer.id,
+            true,
+            socket,
+          );
+        }
+        if (player.turnPlayed === true && player.actionPlayed === false) {
+          await this.serverService.mandatoryAction(
+            map,
+            player.id,
+            true,
+            socket,
+          );
+        }
+        await this.playerService.findByIdAndUpdate(player.id, {
+          turnPlayed: false,
+          actionPlayed: false,
+        });
+      }
+    }
+
     const houses = await this.houseService.findAllSellingFromLobby(lobby.id);
     for (const house of houses) {
       if (house.state !== houseState.OWNED) {
@@ -97,42 +129,6 @@ export class SchedulerService {
           nextOwner: '',
           auction: 0,
           state: 'owned',
-        });
-      }
-    }
-
-    const players = await this.playerService.findAllFromLobby(lobby.id);
-    for (const player of players) {
-      if (!player.lost) {
-        if (player.turnPlayed === false && player.actionPlayed === false) {
-          const dice = this.playerService.generateDice(player);
-          const { newPlayer } = await this.serverService.generatePath(
-            dice,
-            map,
-            player,
-          );
-          await this.serverService.mandatoryAction(
-            map,
-            newPlayer.id,
-            true,
-            socket,
-          );
-        }
-        if (
-          player.turnPlayed === true &&
-          player.actionPlayed === false &&
-          map.cases[player.casePosition].type === CaseType.HOUSE
-        ) {
-          await this.serverService.mandatoryAction(
-            map,
-            player.id,
-            true,
-            socket,
-          );
-        }
-        await this.playerService.findByIdAndUpdate(player.id, {
-          turnPlayed: false,
-          actionPlayed: false,
         });
       }
     }
