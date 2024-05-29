@@ -5,6 +5,8 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { House } from './house.schema';
 import { Lobby } from 'src/lobby/lobby.schema';
+import { Doc } from 'src/server/server.type';
+import { Map } from 'src/map/map.schema';
 
 @Injectable()
 export class HouseService {
@@ -108,6 +110,32 @@ export class HouseService {
       return undefined;
     }
     return houses;
+  }
+
+  async setHouseFailure(
+    playerId: string,
+    failure: 'fire' | 'water' | 'electricity',
+  ) {
+    return await this.houseModel.findOneAndUpdate(
+      { owner: playerId, [`defect.${failure}`]: true },
+      { [`activeDefect.${failure}`]: true },
+    );
+  }
+
+  /**
+   * Get the auction price of a house based on the map configuration.
+   * @param map
+   * @param house
+   * @returns
+   */
+  getAuctionPrice(map: Doc<Map>, house: Doc<House>) {
+    if (house.auction === 0) {
+      return house.price[house.level];
+    }
+    return Math.round(
+      house.auction +
+        (map.configuration.auctionStepPourcent * house.auction) / 100,
+    );
   }
 
   async findAllSellingFromLobby(lobbyId: string) {

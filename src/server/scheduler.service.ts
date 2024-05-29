@@ -51,12 +51,8 @@ export class SchedulerService {
       'turns',
     );
     for (let i = 0; i < turnCount; i++) {
-      console.log(
-        `Turn ${i} scheduled: ${new Date(startTime.getTime() + i * turnSchedule * 1000).toLocaleTimeString()}`,
-      );
       const turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
       if (turnTime > now) {
-        console.log('nextTurn and break');
         nextTurnTime = turnTime;
         break;
       }
@@ -109,7 +105,7 @@ export class SchedulerService {
     for (const player of players) {
       if (!player.lost) {
         if (player.turnPlayed === false && player.actionPlayed === false) {
-          const dice = this.serverService.generateDice(player);
+          const dice = this.playerService.generateDice(player);
           const { newPlayer } = await this.serverService.generatePath(
             dice,
             map,
@@ -117,7 +113,7 @@ export class SchedulerService {
           );
           await this.serverService.mandatoryAction(
             map,
-            newPlayer,
+            newPlayer.id,
             true,
             socket,
           );
@@ -127,7 +123,12 @@ export class SchedulerService {
           player.actionPlayed === false &&
           map.cases[player.casePosition].type === CaseType.HOUSE
         ) {
-          await this.serverService.mandatoryAction(map, player, true, socket);
+          await this.serverService.mandatoryAction(
+            map,
+            player.id,
+            true,
+            socket,
+          );
         }
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: false,

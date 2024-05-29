@@ -14,7 +14,7 @@ import mongoose, { Model } from 'mongoose';
 import { HouseService } from 'src/house/house.service';
 import { Lobby } from 'src/lobby/lobby.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
-import { Case, CaseType, Map } from 'src/map/map.schema';
+import { Case, CaseEventType, CaseType, Map } from 'src/map/map.schema';
 import { MapService } from 'src/map/map.service';
 import {
   Player,
@@ -49,6 +49,7 @@ export class ServerService {
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
+  //#region Socket ID management
   socketIds: PlayerSocketId[] = [];
 
   async setSocketId(playerId: string, socketId: string) {
@@ -94,7 +95,15 @@ export class ServerService {
     }
     return targetSocketId;
   }
+  //#endregion
 
+  /**
+   * Create a game session and run a function with the lobby, player and map. If the function fails, the transaction is aborted.
+   * @param lobbyId
+   * @param userId
+   * @param socket
+   * @param run Function to run with the lobby, player and map fetched.
+   */
   async gameSession(
     lobbyId: string,
     userId: string,
@@ -139,45 +148,6 @@ export class ServerService {
   }
 
   /**
-   * Generate a dice roll for a player based on their bonuses.
-   * @param player
-   * @returns The dice roll.
-   */
-  generateDice(
-    player: mongoose.Document<unknown, {}, Player> &
-      Player & {
-        _id: mongoose.Types.ObjectId;
-      },
-  ) {
-    let dice =
-      Math.floor(Math.random() * 6) +
-      1 +
-      Math.floor(Math.random() * 6) +
-      1 +
-      Math.floor(Math.random() * 6) +
-      1;
-    for (const bonus of player.bonuses) {
-      switch (bonus) {
-        case playerVaultType.diceDouble:
-          dice *= 2;
-          break;
-        case playerVaultType.diceDividedBy2:
-          dice /= 2;
-          break;
-        case playerVaultType.diceMinus2:
-          dice -= 2;
-          break;
-        case playerVaultType.dicePlus2:
-          dice += 2;
-          break;
-      }
-      dice = Math.round(dice);
-      if (dice < 0) dice = 0;
-    }
-    return dice;
-  }
-
-  /**
    * Generate a path for a player based on a dice roll and apply it to the player.
    *
    * @param dice The dice roll.
@@ -197,7 +167,7 @@ export class ServerService {
     const path: Case[] = [map.cases[player.casePosition]];
     let totalEarnThisTurn = 0;
     const playerSalary =
-      this.ratingMultiplicator(player, map) *
+      this.playerService.ratingMultiplicator(player, map) *
       this.playerService.getPlayerSalary(player, map);
     for (let i = 0; i < dice; i++) {
       if (
@@ -237,10 +207,11 @@ export class ServerService {
    */
   async mandatoryAction(
     map: Doc<Map>,
-    player: Doc<Player>,
+    playerId: string,
     forceChoice: boolean,
     socket: ServerGuardSocket | Server,
   ) {
+    const player = await this.playerService.findOneById(playerId);
     const type = map.cases[player.casePosition].type;
     try {
       switch (type) {
@@ -249,7 +220,7 @@ export class ServerService {
             const loanValue =
               map.configuration.bank.value +
               map.configuration.bank.tax *
-                this.ratingMultiplicator(player, map) *
+                this.playerService.ratingMultiplicator(player, map) *
                 map.configuration.bank.value;
             await this.playerMoneyTransaction(
               loanValue,
@@ -291,6 +262,10 @@ export class ServerService {
             });
           }
           break;
+        case CaseType.EVENT: {
+          const event = this.mapService.getRandomEvent();
+          await this.mapEvent(event, player.id, map);
+        }
         default:
           await this.playerService.findByIdAndUpdate(player.id, {
             turnPlayed: true,
@@ -300,83 +275,6 @@ export class ServerService {
     } catch (error) {
       console.error('mandatoryAction : ' + error.message);
       throw new NotImplementedException('mandatoryAction : ' + error.message);
-    }
-  }
-
-  /**
-   * Calculate multiplicator base on the player rating and the map configuration.
-   */
-  ratingMultiplicator(player: Doc<Player>, map: Doc<Map>): number {
-    const rating = player.rating; // Rating 0-5 (2.5 Normal)
-    const multiplicator = map.configuration.ratingMultiplicator; // [0.8, 1.2]
-    const multiplicatorRange = multiplicator[1] - multiplicator[0]; // 0.4
-    const ratingMultiplicator =
-      (rating / 5) * multiplicatorRange + multiplicator[0];
-    return ratingMultiplicator;
-  }
-
-  /**
-   * Get the auction price of a house based on the map configuration.
-   * @param map
-   * @param house
-   * @returns
-   */
-  getAuctionPrice(map: Doc<Map>, house: Doc<House>) {
-    if (house.auction === 0) {
-      return house.price[house.level];
-    }
-    return Math.round(
-      house.auction +
-        (map.configuration.auctionStepPourcent * house.auction) / 100,
-    );
-  }
-
-  /**
-   * Generate a transaction DOCUMENT between two players.
-   * @param fromPlayerId
-   * @param amount of money to transfer.
-   * @param targetPlayerId
-   * @param type
-   * @returns
-   */
-  async playerGenerateTransaction(
-    fromPlayerId: string,
-    amount: number,
-    targetPlayerId: string,
-    type: transactionType,
-  ) {
-    try {
-      if (amount <= 0) {
-        throw new ForbiddenException(
-          'Transaction amount must be positive and non-zero.',
-        );
-      }
-      // If the sender is the bank, we don't need to update the sender player.
-      if (fromPlayerId !== Bank.id) {
-        const player = await this.playerService.findOneById(fromPlayerId);
-        if (!player) {
-          return undefined;
-        }
-        await this.playerService.findByIdAndUpdate(player.id, {
-          $push: { transactions: { amount, playerId: targetPlayerId, type } },
-        });
-      }
-      // If the target is the bank, we don't need to update the target player.
-      if (targetPlayerId !== Bank.id) {
-        const targetPlayer =
-          await this.playerService.findOneById(targetPlayerId);
-        if (!targetPlayer) {
-          return undefined;
-        }
-        await this.playerService.findByIdAndUpdate(targetPlayer.id, {
-          $push: { transactions: { amount, playerId: fromPlayerId, type } },
-        });
-      }
-    } catch (error) {
-      console.error('playerGenerateTransaction : ' + error.message);
-      throw new NotImplementedException(
-        'playerGenerateTransaction : ' + error.message,
-      );
     }
   }
 
@@ -460,7 +358,7 @@ export class ServerService {
         }
       }
       if (createTransactionDocument) {
-        await this.playerGenerateTransaction(
+        await this.playerService.generateTransaction(
           newFromPlayer.user,
           amount, // from player deduction
           newToPlayer.user,
@@ -472,6 +370,32 @@ export class ServerService {
       throw new NotImplementedException(
         'playerMoneyTransition : ' + error.message,
       );
+    }
+  }
+
+  async mapEvent(
+    caseEventType: CaseEventType,
+    playerId: string,
+    map: Doc<Map>,
+  ) {
+    const player = await this.playerService.findOneById(playerId);
+    switch (caseEventType) {
+      case CaseEventType.DICE_DOUBLE:
+        await this.playerService.findByIdAndUpdate(player.id, {
+          $push: { bonuses: playerVaultType.dicePlus2 },
+        });
+        break;
+      case CaseEventType.ELECTRICITY_FAILURE:
+        await this.houseService.setHouseFailure(player.id, 'electricity');
+        break;
+      case CaseEventType.FIRE_FAILURE:
+        await this.houseService.setHouseFailure(player.id, 'fire');
+        break;
+      case CaseEventType.WATER_FAILURE:
+        await this.houseService.setHouseFailure(player.id, 'water');
+        break;
+      case CaseEventType.CASINO:
+        break;
     }
   }
 }

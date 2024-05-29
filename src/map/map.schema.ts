@@ -42,13 +42,32 @@ export enum CaseType {
   METRO = 'metro',
   BUS = 'bus',
   BANK = 'bank',
-  PARK = 'park',
   EVENT = 'event',
   START = 'start',
   HOUSE = 'house',
   INTERSECTION = 'intersection',
   MONUMENTS = 'monuments',
+  COPS = 'cops',
+  SCHOOL = 'school',
 }
+
+export enum CaseEventType {
+  DICE_DOUBLE = 'dice_double',
+  ELECTRICITY_FAILURE = 'electricity_failure',
+  WATER_FAILURE = 'water_failure',
+  FIRE_FAILURE = 'fire_failure',
+  RENT_DISCOUNT = 'rent_discount',
+  CASINO = 'casino',
+}
+
+export const CaseEvent = [
+  { code: CaseEventType.DICE_DOUBLE, dropRate: 0.1 },
+  { code: CaseEventType.ELECTRICITY_FAILURE, dropRate: 0.1 },
+  { code: CaseEventType.WATER_FAILURE, dropRate: 0.1 },
+  { code: CaseEventType.FIRE_FAILURE, dropRate: 0.1 },
+  { code: CaseEventType.RENT_DISCOUNT, dropRate: 0.1 },
+  { code: CaseEventType.CASINO, dropRate: 0.3 },
+];
 
 export const CaseConfigSchema = SchemaFactory.createForClass(Case);
 

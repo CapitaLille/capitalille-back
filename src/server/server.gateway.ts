@@ -120,13 +120,13 @@ export class ServerGateway
           if (player.turnPlayed) {
             throw new ForbiddenException('Player already played his turn');
           }
-          const dice = this.serverService.generateDice(player);
+          const dice = this.playerService.generateDice(player);
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice, map, player);
           console.log(path, salary, newPlayer);
           await this.serverService.mandatoryAction(
             map,
-            newPlayer,
+            newPlayer.id,
             false,
             socket,
           );
@@ -183,7 +183,7 @@ export class ServerGateway
             throw new ForbiddenException('House is not for sale');
           }
           const actualAuction = house.auction;
-          const newAuction = this.serverService.getAuctionPrice(map, house);
+          const newAuction = this.houseService.getAuctionPrice(map, house);
           if (player.money < newAuction) {
             socket.emit(GameEvent.ERROR, {
               message: 'Player does not have enough money',
