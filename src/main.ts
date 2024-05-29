@@ -32,6 +32,6 @@ async function bootstrap() {
   //   preflightContinue: false,
   //   optionsSuccessStatus: 204,
   // });
-  await app.listen(port); // Bind to 0.0.0.0
+  await app.listen(3000); // Bind to 0.0.0.0
 }
 bootstrap();
