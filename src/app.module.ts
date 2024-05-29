@@ -20,7 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       isGlobal: true,
       cache: true,
     }),
-    ScheduleModule.forRoot(),
+    ScheduleModule,
     MongooseModule.forRoot(process.env.MONGODB_URL),
     UserModule,
     AuthModule,
