@@ -26,6 +26,6 @@ async function bootstrap() {
     methods: 'GET',
     allowedHeaders: 'Content-Type, Accept',
   });
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0'); // Bind to 0.0.0.0
 }
 bootstrap();
