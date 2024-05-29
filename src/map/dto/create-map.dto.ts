@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsString, IsArray, ValidateNested } from 'class-validator';
+import { IsDefined, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Case, Configuration, House } from '../map.schema';
+import { Case, Configuration, House, Monument } from '../map.schema';
 
 export class CreateMapDto {
   @ApiProperty({
@@ -32,4 +32,14 @@ export class CreateMapDto {
   @ValidateNested()
   @Type(() => Configuration)
   configuration: Configuration;
+
+  @ApiProperty({
+    description: 'An array of monuments.',
+    type: [Monument],
+  })
+  @IsDefined({ message: 'monuments is required' })
+  @IsArray({ message: 'monuments must be an array' })
+  @ValidateNested({ each: true })
+  @Type(() => Monument)
+  monuments: Monument[];
 }
