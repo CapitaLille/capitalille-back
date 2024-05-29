@@ -18,7 +18,7 @@ async function bootstrap() {
 
   const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&';
   const nanoid = customAlphabet(alphabet, 6);
-
+  const port = process.env.PORT || 8080;
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
@@ -26,6 +26,6 @@ async function bootstrap() {
     methods: 'GET',
     allowedHeaders: 'Content-Type, Accept',
   });
-  await app.listen(8080);
+  await app.listen(port);
 }
 bootstrap();
