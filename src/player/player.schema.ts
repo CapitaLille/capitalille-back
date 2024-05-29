@@ -29,6 +29,22 @@ export class Player {
   lost: boolean;
 }
 
+export enum PlayerEvent {
+  PLAY_TURN = 'playTurn',
+  SUBSCRIBE = 'subscribe',
+  BUY_AUCTION = 'auction',
+  BANK_LOAN_TAKE = 'bankLoanRequest',
+  HOUSE_RENT_FRAUD = 'houseRent',
+  HOUSE_RENT_PAY = 'houseRentPay',
+  UNHANDLED_EVENT = 'unhandledEvent',
+  METRO_PAY = 'metroRequest',
+  BUS_PAY = 'busRequest',
+  MONUMENTS_PAY = 'monumentsRequest',
+  COPS_COMPLAINT = 'copsRequest',
+  SCHOOL_PAY = 'schoolRequest',
+  CASINO_GAMBLE = 'casinoRequest',
+}
+
 @Schema()
 export class Transaction {
   @Prop({ required: true })
@@ -60,6 +76,8 @@ export enum playerVaultType {
   backward3,
   loan,
   diploma,
+  rentDiscount,
+  casino_temp,
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);

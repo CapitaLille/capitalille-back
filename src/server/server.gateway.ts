@@ -32,9 +32,14 @@ import { MapService } from 'src/map/map.service';
 import { InjectConnection } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { ServerService } from './server.service';
-import { transactionType } from 'src/player/player.schema';
+import {
+  PlayerEvent,
+  playerVaultType,
+  transactionType,
+} from 'src/player/player.schema';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler.service';
+import { CaseEventType, CaseType } from 'src/map/map.schema';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -70,41 +75,53 @@ export class ServerGateway
   }
 
   @UseGuards(ServerGuard)
-  @SubscribeMessage('subscribe')
+  @SubscribeMessage(PlayerEvent.SUBSCRIBE)
   async suscribe(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
   ) {
     console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     this.serverService.setSocketId(socket.handshake.user.sub, socket.id);
-    socket.join(data.lobbyId);
-  }
-
-  @UseGuards(ServerGuard)
-  @SubscribeMessage('getParty')
-  async getParty(
-    @ConnectedSocket() socket: ServerGuardSocket,
-    @MessageBody() data: { lobbyId: string },
-  ) {
-    const userId = socket.handshake.user.sub;
-    try {
-      await this.serverService.gameSession(
+    const player = await this.playerService.findOne(
+      socket.handshake.user.sub,
+      data.lobbyId,
+    );
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    } else {
+      console.log(
+        'player join the lobby :',
         data.lobbyId,
-        userId,
-        socket,
-        async (lobby, player, map) => {
-          const players = await this.playerService.findAllFromLobby(lobby.id);
-          const houses = await this.houseService.findAllFromLobby(lobby.id);
-          socket.emit(GameEvent.GET_PARTY, { lobby, houses, players, map });
-        },
+        ' playerId :',
+        socket.handshake.user.sub,
       );
-    } catch (error) {
-      socket.emit(GameEvent.ERROR, { message: error.message });
+      socket.join(data.lobbyId);
+      const userId = socket.handshake.user.sub;
+      try {
+        await this.serverService.gameSession(
+          data.lobbyId,
+          userId,
+          socket,
+          async (lobby, player, map) => {
+            const players = await this.playerService.findAllFromLobby(lobby.id);
+            const houses = await this.houseService.findAllFromLobby(lobby.id);
+            socket.emit(GameEvent.SUBSCRIBE, {
+              lobby,
+              houses,
+              players,
+              map,
+              player,
+            });
+          },
+        );
+      } catch (error) {
+        socket.emit(GameEvent.ERROR, { message: error.message });
+      }
     }
   }
 
   @UseGuards(ServerGuard)
-  @SubscribeMessage('playTurn')
+  @SubscribeMessage(PlayerEvent.PLAY_TURN)
   async playTurn(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
@@ -122,7 +139,7 @@ export class ServerGateway
           }
           const dice = this.playerService.generateDice(player);
           const { path, salary, newPlayer } =
-            await this.serverService.generatePath(dice, map, player);
+            await this.serverService.generatePath(dice.diceValue, map, player);
           console.log(path, salary, newPlayer);
           await this.serverService.mandatoryAction(
             map,
@@ -130,7 +147,11 @@ export class ServerGateway
             false,
             socket,
           );
-          socket.emit(GameEvent.PLAY_TURN, { path, salary });
+          socket.emit(GameEvent.PLAY_TURN, {
+            diceBonuses: dice.diceBonuses,
+            path,
+            salary,
+          });
         },
       );
     } catch (error) {
@@ -139,7 +160,7 @@ export class ServerGateway
   }
 
   @UseGuards(ServerGuard)
-  @SubscribeMessage('makeAuction')
+  @SubscribeMessage(PlayerEvent.BUY_AUCTION)
   async makeAuction(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; houseIndex: number },
@@ -230,7 +251,7 @@ export class ServerGateway
             socket
               .to(targetSocketId)
               .emit(
-                GameEvent.LOST_AUCTION,
+                GameEvent.AUCTION_EXIT,
                 new AuctionData(data.houseIndex, player.id, newAuction),
               ),
           );
@@ -238,11 +259,307 @@ export class ServerGateway
             socket
               .to(lobby.id)
               .emit(
-                GameEvent.AUCTION,
+                GameEvent.AUCTION_SET,
                 new AuctionData(data.houseIndex, userId, newAuction),
               ),
           );
           await Promise.all(promises);
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.BANK_LOAN_TAKE)
+  async bankLoanRequest(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          await this.serverService.mapEventAction(
+            PlayerEvent.BANK_LOAN_TAKE,
+            undefined,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.HOUSE_RENT_FRAUD)
+  async houseRentFraud(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          if (map.cases[player.casePosition].type !== CaseType.HOUSE) {
+            throw new ForbiddenException('Player is not on a house case');
+          }
+          if (house.owner === player.id) {
+            throw new ForbiddenException('Player is the owner of the house');
+          }
+          if (
+            !map.houses[data.houseIndex].cases.includes(player.casePosition)
+          ) {
+            throw new ForbiddenException('Player is not on the house case');
+          }
+          if (player.actionPlayed) {
+            throw new ForbiddenException('Player already played his action');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.HOUSE_RENT_FRAUD,
+            data.houseIndex,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.HOUSE_RENT_PAY)
+  async houseRentPay(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          if (map.cases[player.casePosition].type !== CaseType.HOUSE) {
+            throw new ForbiddenException('Player is not on a house case');
+          }
+          if (house.owner === player.id) {
+            throw new ForbiddenException('Player is the owner of the house');
+          }
+          if (
+            !map.houses[data.houseIndex].cases.includes(player.casePosition)
+          ) {
+            throw new ForbiddenException('Player is not on the house case');
+          }
+          if (player.actionPlayed) {
+            throw new ForbiddenException('Player already played his action');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.HOUSE_RENT_PAY,
+            data.houseIndex,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.METRO_PAY)
+  async metroPay(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          if (map.cases[player.casePosition].type !== CaseType.METRO) {
+            throw new ForbiddenException('Player is not on a metro case');
+          }
+          if (player.actionPlayed) {
+            throw new ForbiddenException('Player already played his action');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.METRO_PAY,
+            undefined,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.BUS_PAY)
+  async busPay(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          await this.serverService.mapEventAction(
+            PlayerEvent.BUS_PAY,
+            undefined,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.MONUMENTS_PAY)
+  async monumentsPay(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          if (map.cases[player.casePosition].type !== CaseType.MONUMENTS) {
+            throw new ForbiddenException('Player is not on a monuments case');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.MONUMENTS_PAY,
+            undefined,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.COPS_COMPLAINT)
+  async copsComplaint(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; targetPlayerId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          if (map.cases[player.casePosition].type !== CaseType.COPS) {
+            throw new ForbiddenException('Player is not on a cops case');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.COPS_COMPLAINT,
+            data.targetPlayerId,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.SCHOOL_PAY)
+  async schoolPay(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          if (map.cases[player.casePosition].type !== CaseType.SCHOOL) {
+            throw new ForbiddenException('Player is not on a school case');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.SCHOOL_PAY,
+            undefined,
+            player.id,
+            socket,
+          );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.CASINO_GAMBLE)
+  async casinoGamble(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          if (map.cases[player.casePosition].type !== CaseType.EVENT) {
+            throw new ForbiddenException('Player is not on a casino case');
+          }
+          if (!player.bonuses.includes(playerVaultType.casino_temp)) {
+            throw new ForbiddenException(
+              'Player does not have the casino bonus',
+            );
+          }
+          if (player.actionPlayed) {
+            throw new ForbiddenException('Player already played his action');
+          }
+          await this.serverService.mapEventAction(
+            PlayerEvent.CASINO_GAMBLE,
+            undefined,
+            player.id,
+            socket,
+          );
         },
       );
     } catch (error) {

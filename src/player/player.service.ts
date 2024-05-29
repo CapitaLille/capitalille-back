@@ -104,7 +104,10 @@ export class PlayerService {
    * @param player
    * @returns The dice roll.
    */
-  generateDice(player: Doc<Player>) {
+  generateDice(player: Doc<Player>): {
+    diceValue: number;
+    diceBonuses: playerVaultType[];
+  } {
     let dice =
       Math.floor(Math.random() * 6) +
       1 +
@@ -112,7 +115,15 @@ export class PlayerService {
       1 +
       Math.floor(Math.random() * 6) +
       1;
-    for (const bonus of player.bonuses) {
+
+    let diceBonuses = player.bonuses.filter(
+      (bonus) =>
+        bonus === playerVaultType.diceDouble ||
+        bonus === playerVaultType.diceDividedBy2 ||
+        bonus === playerVaultType.diceMinus2 ||
+        bonus === playerVaultType.dicePlus2,
+    );
+    for (const bonus of diceBonuses) {
       switch (bonus) {
         case playerVaultType.diceDouble:
           dice *= 2;
@@ -130,7 +141,10 @@ export class PlayerService {
       dice = Math.round(dice);
       if (dice < 0) dice = 0;
     }
-    return dice;
+    this.playerModel.findByIdAndUpdate(player.id, {
+      $pull: { bonuses: { $in: [diceBonuses] } },
+    });
+    return { diceValue: dice, diceBonuses: diceBonuses };
   }
 
   /**

@@ -7,7 +7,6 @@ export class GameError<T> {
   data: T;
 
   constructor(message: string = 'Error', data: T = null) {
-    // this.message = message;
     this.event = 'error';
     this.data = { message, ...data };
   }
@@ -25,14 +24,26 @@ export class GameResponse<T> {
 
 export enum GameEvent {
   ERROR = 'error',
-  GET_PARTY = 'getParty',
-  PLAY_TURN = 'playTurn',
+  SUBSCRIBE = 'subscribe',
+  PLAY_TURN = 'playTurn', // Return player's diceBonuses, path, salary and last case gameEvent.
   MONEY_CHANGE = 'moneyChange',
-  AUCTION = 'auction',
-  LOST_AUCTION = 'loseAuction',
-  LOST_GAME = 'loseGame',
+  AUCTION_SET = 'auctionSet',
+  AUCTION_EXIT = 'auctionExit',
+  LOST_GAME = 'lostGame',
   NEXT_TURN = 'nextTurn',
   END_GAME = 'endGame',
+  BANK_LOAN_REQUEST = 'bankLoanRequest', // Request a choise (a loan to the bank or pass)
+  BANK_LOAN_REFUND = 'bankLoanRefund', // Refund a loan to the bank.
+  HOUSE_RENT_REQUEST = 'houseRent', // Propose to fraud a player or pay rent.
+  HOUSE_RENT_PAY = 'houseRentPay', // Pay rent to another player.
+  HOUSE_RENT_FRAUD_SUCCESS = 'houseRentFraudSuccess', // Fraud succeeded. Pay nothing.
+  HOUSE_RENT_FRAUD_FAIL = 'houseRentFraudFail', // Fraud failed. Pay rent * x + Reputation loss.
+  UNHANDLED_EVENT = 'unhandledEvent',
+  METRO_REQUEST = 'metroRequest', // Request to take the metro or pass.
+  BUS_REQUEST = 'busRequest', // Request to take the bus or pass.
+  MONUMENTS_REQUEST = 'monumentsRequest', // Request to visit the monuments or pass.
+  COPS_REQUEST = 'copsRequest', // Request to pay the cops or pass.
+  SCHOOL_REQUEST = 'schoolRequest', // Request to pay the school or pass.
 }
 
 export interface PlayerSocketId {

@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { CaseEvent, CaseEventType, CaseType, Map } from './map.schema';
 import mongoose, { Model } from 'mongoose';
 import { Doc } from 'src/server/server.type';
+import { Player } from 'src/player/player.schema';
 
 @Injectable()
 export class MapService {
@@ -202,6 +203,19 @@ export class MapService {
    * Get random event from the map configuration.
    */
   getRandomEvent(): CaseEventType {
+    const random = Math.random();
+    const events = CaseEvent;
+    let sum = 0;
+    for (const event of events) {
+      sum += event.dropRate;
+      if (random < sum) {
+        return event.code;
+      }
+    }
+    return null;
+  }
+
+  gambleCasino(player: Doc<Player>, map: Doc<Map>) {
     const random = Math.random();
     const events = CaseEvent;
     let sum = 0;
