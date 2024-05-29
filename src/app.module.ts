@@ -12,7 +12,6 @@ import { MapModule } from './map/map.module';
 import { HouseModule } from './house/house.module';
 import { ServerModule } from './server/server.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [

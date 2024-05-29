@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { CaseType, Map } from './map.schema';
+import { CaseEvent, CaseEventType, CaseType, Map } from './map.schema';
 import mongoose, { Model } from 'mongoose';
 import { Doc } from 'src/server/server.type';
 
@@ -196,5 +196,21 @@ export class MapService {
       last = newLast;
     }
     return nearestCases;
+  }
+
+  /**
+   * Get random event from the map configuration.
+   */
+  getRandomEvent(): CaseEventType {
+    const random = Math.random();
+    const events = CaseEvent;
+    let sum = 0;
+    for (const event of events) {
+      sum += event.dropRate;
+      if (random < sum) {
+        return event.code;
+      }
+    }
+    return null;
   }
 }
