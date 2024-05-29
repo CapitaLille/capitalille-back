@@ -16,6 +16,7 @@ import { MapSchema } from 'src/map/map.schema';
 import { HouseSchema } from 'src/house/house.schema';
 import { ServerService } from './server.service';
 import { SchedulerService } from './scheduler.service';
+import { SchedulerRegistry } from '@nestjs/schedule';
 
 @Module({
   providers: [
@@ -26,6 +27,7 @@ import { SchedulerService } from './scheduler.service';
     LobbyService,
     PlayerService,
     SchedulerService,
+    SchedulerRegistry,
     MapService,
     HouseService,
   ],
