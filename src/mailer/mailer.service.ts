@@ -75,7 +75,7 @@ export class MailerService {
                         <div class="content">
                             <p>Bonjour,</p>
                             <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte CapitaLille. Veuillez cliquer sur le lien ci-dessous pour procéder à la réinitialisation :</p>
-                            <p><a href="http://localhost:3000/reset-password?token=${token}">Réinitialiser le mot de passe</a></p>
+                            <p><a href="https://capitalille.azurewebsites.net/reset-password?token=${token}">Réinitialiser le mot de passe</a></p>
                             <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet e-mail.</p>
                             <p>Cordialement,<br>L'équipe CapitaLille</p>
                         </div>
