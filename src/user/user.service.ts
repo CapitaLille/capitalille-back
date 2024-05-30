@@ -29,19 +29,12 @@ export class UserService {
   ) {}
 
   async findOne(userId: string) {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      return undefined;
-    }
-    return {
-      id: user._id,
-      password: user.password,
-      email: user.email,
-      nickname: user.nickname,
-      lobbys: user.lobbys as any[],
-      credit: user.credit,
-      pp: user.pp,
-    };
+    return await this.userModel.findById(userId);
+  }
+
+  async findOneByEmail(email: string) {
+    console.log('email', email);
+    return await this.userModel.findOne({ email });
   }
 
   async findAll() {
@@ -219,12 +212,6 @@ export class UserService {
     if (!(await this.userModel.findById(userId))) {
       throw new NotFoundException('User not found');
     }
-    // if (updateUserDto.password) {
-    //   updateUserDto.password = await bcrypt.hash(
-    //     updateUserDto.password,
-    //     bcryptConstants.salt,
-    //   );
-    // }
     await this.userModel.findByIdAndUpdate(userId, updateUserDto);
     return HttpStatus.OK;
   }
@@ -256,6 +243,23 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     await this.userModel.findByIdAndDelete(userId);
+    return HttpStatus.OK;
+  }
+
+  async updateUserPassword(email: string, newPassword: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const hashedPassword = await bcrypt
+      .hash(newPassword, bcryptConstants.salt)
+      .catch((e) => {
+        throw new ConflictException(e.message);
+      });
+    await this.userModel.findOneAndUpdate(
+      { email },
+      { password: hashedPassword },
+    );
     return HttpStatus.OK;
   }
 }

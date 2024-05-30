@@ -13,6 +13,7 @@ import { HouseModule } from './house/house.module';
 import { ServerModule } from './server/server.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FilesAzureService } from './fileazure/filesAzure.service';
+import { MailerService } from './mailer/mailer.service';
 
 @Module({
   imports: [
@@ -37,6 +38,6 @@ import { FilesAzureService } from './fileazure/filesAzure.service';
     ServerModule,
   ],
   controllers: [AppController],
-  providers: [AppService, FilesAzureService],
+  providers: [AppService, FilesAzureService, MailerService],
 })
 export class AppModule {}

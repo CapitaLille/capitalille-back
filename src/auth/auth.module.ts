@@ -5,6 +5,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/user/user.schema';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { jwtConstants } from 'src/user/constants';
+import { MailerService } from 'src/mailer/mailer.service';
+import { UserService } from 'src/user/user.service';
+import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 
 @Module({
   imports: [
@@ -15,6 +18,12 @@ import { jwtConstants } from 'src/user/constants';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtService],
+  providers: [
+    AuthService,
+    JwtService,
+    MailerService,
+    UserService,
+    FilesAzureService,
+  ],
 })
 export class AuthModule {}
