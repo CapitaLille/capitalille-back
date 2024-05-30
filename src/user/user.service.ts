@@ -16,12 +16,15 @@ import { CreatePushDto } from './dto/create-push.dto';
 import { Notification } from './user.schema';
 import { nanoid } from 'nanoid';
 import { LobbyService } from 'src/lobby/lobby.service';
+import { ConfigService } from '@nestjs/config';
+import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 
 @Injectable()
 export class UserService {
   constructor(
+    private readonly configService: ConfigService,
+    private readonly fileService: FilesAzureService,
     @InjectModel('User') private readonly userModel: Model<User>,
-    // private readonly lobbyService: LobbyService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -224,6 +227,28 @@ export class UserService {
     // }
     await this.userModel.findByIdAndUpdate(userId, updateUserDto);
     return HttpStatus.OK;
+  }
+
+  async updatePp(userId: string, file: Express.Multer.File) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const containerName = this.configService.get('PROFILE_PICTURES_CONTAINER');
+    if (user.pp !== '') {
+      console.log('delete', user.pp);
+      await this.fileService.deleteFile(user.pp, containerName);
+      await this.userModel.findByIdAndUpdate(userId, {
+        pp: '',
+      });
+    }
+    console.log('upload', file);
+    const upload = await this.fileService.uploadFile(file, containerName);
+    console.log('upload', upload);
+    await this.userModel.findByIdAndUpdate(userId, {
+      pp: upload,
+    });
+    return { pp: upload };
   }
 
   async remove(userId: string) {

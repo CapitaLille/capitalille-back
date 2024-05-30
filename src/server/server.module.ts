@@ -17,6 +17,7 @@ import { HouseSchema } from 'src/house/house.schema';
 import { ServerService } from './server.service';
 import { SchedulerService } from './scheduler.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
+import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 
 @Module({
   providers: [
@@ -30,6 +31,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
     SchedulerRegistry,
     MapService,
     HouseService,
+    FilesAzureService,
   ],
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
