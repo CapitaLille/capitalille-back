@@ -16,6 +16,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { bcryptConstants, jwtConstants } from 'src/user/constants';
 import { LoginDto } from './dto/login.dto';
+import { Doc } from 'src/server/server.type';
 
 @Injectable()
 export class AuthService {
@@ -76,7 +77,9 @@ export class AuthService {
     }
   }
 
-  private async generateTokens(user) {
+  async generateTokens(
+    user: Doc<User>,
+  ): Promise<{ access: string; verify: string }> {
     const payload = {
       sub: user._id,
       email: user.email,
@@ -99,5 +102,34 @@ export class AuthService {
         { secret: jwtConstants.secret },
       ),
     };
+  }
+
+  async generateResetPasswordToken(user: Doc<User>): Promise<string> {
+    const payload = {
+      email: user.email,
+    };
+    return await this.jwt.signAsync(
+      {
+        exp: Math.floor(Date.now() / 1000) + 15 * 60, // 15 minutes
+        data: payload,
+      },
+      { secret: jwtConstants.secret },
+    );
+  }
+
+  async validatePasswordResetToken(token: string): Promise<{ email: string }> {
+    return await this.jwt
+      .verifyAsync(token, {
+        secret: jwtConstants.secret,
+      })
+      .catch((err) => {
+        console.log(err);
+        throw new UnauthorizedException(
+          "Le token n'est pas valide, ou a expiré.",
+        );
+      })
+      .then((data) => {
+        return data.data;
+      });
   }
 }
