@@ -23,7 +23,7 @@ export class User {
   @Prop({ required: true, default: 0 })
   credit: number;
 
-  @Prop({ required: true, default: '' })
+  @Prop({ required: false, default: '' })
   pp: string;
 
   @Prop({ required: true, default: [] })

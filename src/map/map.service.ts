@@ -1389,10 +1389,95 @@ export class MapService {
       ],
     };
 
+    const names = [
+      'Villa des Oliviers',
+      'Maison du Soleil',
+      'Villa Harmonie',
+      'Maison des Sables',
+      'Villa Émeraude',
+      'Maison des Vignes',
+      'Villa Belle Vue',
+      'Maison du Lac',
+      'Villa des Fleurs',
+      'Maison de la Forêt',
+      'Villa Arc-en-Ciel',
+      'Maison des Marais',
+      'Villa Sérénité',
+      'Maison du Bonheur',
+      'Villa des Étoiles',
+      'Maison du Vent',
+      'Villa Paradis',
+      'Maison de la Plage',
+      'Villa des Cygnes',
+      'Maison du Jardin',
+      'Villa des Palmiers',
+      'Maison de la Mer',
+      'Villa Tranquillité',
+      'Maison des Alizés',
+      'Villa des Roses',
+      'Maison du Ruisseau',
+      'Villa Azur',
+      'Maison des Collines',
+      'Villa des Neiges',
+      'Maison du Printemps',
+      'Villa des Mimosas',
+      'Maison de la Lune',
+      'Villa des Pins',
+      'Maison des Eaux',
+      'Villa des Lavandes',
+      'Maison du Sud',
+      'Villa du Rivage',
+      'Maison des Érables',
+      'Villa des Pêcheurs',
+      'Maison du Pont',
+      'Villa des Rêves',
+      'Maison du Rocher',
+      'Villa du Bois',
+      'Maison des Aigles',
+      'Villa des Amandiers',
+      "Maison de l'Etang",
+      'Villa des Sources',
+      "Maison de l'Horizon",
+      'Villa des Vagues',
+      'Maison des Écrins',
+    ];
+
+    const houses = [];
+    for (let i = 0; i < map.houses.length; i++) {
+      const priceIndex = Math.floor(Math.random() * i);
+      let house = {
+        objectName: map.houses[i].objectName,
+        coordinates: map.houses[i].coordinates,
+        cases: map.houses[i].cases,
+        name: names[i],
+        price: [
+          10000 * i,
+          10000 * i + 10000,
+          10000 * i + 20000,
+          10000 * i + 30000,
+        ],
+        rent: [1000 * i, 1000 * i + 1000, 1000 * i + 2000, 1000 * i + 3000],
+      };
+      houses.push(house);
+    }
+
+    const monuments = [];
+    for (let i = 0; i < map.monuments.length; i++) {
+      monuments.push({
+        description: 'Monument description',
+        objectName: map.monuments[i].objectName,
+        coordinates: map.monuments[i].coordinates,
+        cases: map.monuments[i].cases,
+        name: map.monuments[i].name,
+        price: 100000 * i,
+        bonus: 0.2 * i,
+      });
+    }
+
     return await this.mapModel.create({
       cases: map.cases,
-      houses: map.houses,
-      monuments: map.monuments,
+      houses: houses,
+      monuments: monuments,
       configuration: {
         name: 'Default',
         description: 'Default configuration',

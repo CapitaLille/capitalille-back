@@ -12,10 +12,18 @@ import { MapSchema } from 'src/map/map.schema';
 import { MapModule } from 'src/map/map.module';
 import { HouseService } from 'src/house/house.service';
 import { HouseModule } from 'src/house/house.module';
+import { FilesAzureService } from 'src/fileazure/filesAzure.service';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   controllers: [UserController],
-  providers: [JwtService, LobbyService, UserService],
+  providers: [
+    JwtService,
+    LobbyService,
+    UserService,
+    FilesAzureService,
+    ConfigService,
+  ],
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),

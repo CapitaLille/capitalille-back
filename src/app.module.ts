@@ -12,11 +12,12 @@ import { MapModule } from './map/map.module';
 import { HouseModule } from './house/house.module';
 import { ServerModule } from './server/server.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FilesAzureService } from './fileazure/filesAzure.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env.dev', '.env.prod'],
+      envFilePath: ['.env.dev', '.env.prod', '.env'],
       isGlobal: true,
       cache: true,
     }),
@@ -32,6 +33,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     ServerModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, FilesAzureService],
 })
 export class AppModule {}
