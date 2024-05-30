@@ -32,6 +32,11 @@ export class LobbyController {
     return await this.lobbyService.findAll();
   }
 
+  @Get(':lobbyId')
+  async findOne(@Param('lobbyId') lobbyId: string) {
+    return await this.lobbyService.findOne(lobbyId);
+  }
+
   @Delete(':lobbyId')
   @UseGuards(AuthGuard)
   async remove(@Param('lobbyId') lobbyId: string) {
