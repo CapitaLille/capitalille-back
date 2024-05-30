@@ -16,10 +16,14 @@ import { FilesAzureService } from './fileazure/filesAzure.service';
 
 @Module({
   imports: [
+    // ConfigModule.forRoot({
+    //   envFilePath: ['.env.dev', '.env.prod', '.env'],
+    //   isGlobal: true,
+    //   cache: true,
+    // }),
     ConfigModule.forRoot({
-      envFilePath: ['.env.dev', '.env.prod', '.env'],
-      isGlobal: true,
-      cache: true,
+      isGlobal: true, // Make ConfigModule available globally
+      envFilePath: '.env', // Load from .env file
     }),
     MongooseModule.forRoot(
       'mongodb+srv://adrienvrh2:6kiI2IWc87LV9G6d@cluster0.sfi6lfh.mongodb.net/capitalille_dev',
