@@ -6,32 +6,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  // Determine the environment
-  const env =
-    process.env.ENV_PRODUCTION === 'true' ? 'production' : 'development';
-
-  // Load environment variables based on the environment
-  if (env === 'production') {
-    dotenv.config({ path: '.env.prod' });
-  } else {
-    dotenv.config({ path: '.env.dev' });
-  }
-
+  dotenv.config();
   const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&';
   const nanoid = customAlphabet(alphabet, 6);
-  const port = process.env.PORT || 8080;
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors({
     origin: '*',
     methods: '*',
   });
   app.useGlobalPipes(new ValidationPipe());
-  // app.enableCors({
-  //   origin: '*',
-  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  //   preflightContinue: false,
-  //   optionsSuccessStatus: 204,
-  // });
-  await app.listen(8080); // Bind to 0.0.0.0
+  await app.listen(8080);
 }
 bootstrap();
