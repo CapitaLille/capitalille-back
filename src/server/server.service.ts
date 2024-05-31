@@ -202,7 +202,6 @@ export class ServerService {
       turnPlayed: true,
       $inc: { money: totalEarnThisTurn },
     });
-
     return { path, salary: playerSalary, newPlayer };
   }
 
@@ -277,6 +276,7 @@ export class ServerService {
             event,
             player.id,
             autoPlay,
+            socket,
           );
           return gameEvent;
         case CaseType.METRO:
@@ -406,6 +406,7 @@ export class ServerService {
     caseEventType: CaseEventType,
     playerId: string,
     autoPlay: boolean,
+    socket: ServerGuardSocket | Server,
   ): Promise<CaseEventType> {
     const player = await this.playerService.findOneById(playerId);
     switch (caseEventType) {
@@ -415,21 +416,25 @@ export class ServerService {
         });
         break;
       case CaseEventType.ELECTRICITY_FAILURE:
-        await this.houseService.setHouseFailure(player.id, 'electricity');
+        await this.houseService.setHouseFailure(
+          player.id,
+          'electricity',
+          socket,
+        );
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: true,
           actionPlayed: true,
         });
         break;
       case CaseEventType.FIRE_FAILURE:
-        await this.houseService.setHouseFailure(player.id, 'fire');
+        await this.houseService.setHouseFailure(player.id, 'fire', socket);
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: true,
           actionPlayed: true,
         });
         break;
       case CaseEventType.WATER_FAILURE:
-        await this.houseService.setHouseFailure(player.id, 'water');
+        await this.houseService.setHouseFailure(player.id, 'water', socket);
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: true,
           actionPlayed: true,

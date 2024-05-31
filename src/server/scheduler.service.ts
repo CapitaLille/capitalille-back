@@ -39,17 +39,6 @@ export class SchedulerService {
     const { id, startTime, turnSchedule, turnCount } = lobby;
     const now = new Date();
     let nextTurnTime: Date | null = null;
-    console.log(
-      'Scheduling next turn for lobby',
-      id,
-      'at',
-      startTime,
-      'every',
-      turnSchedule,
-      'seconds for',
-      turnCount,
-      'turns',
-    );
     for (let i = 0; i < turnCount; i++) {
       const turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
       if (turnTime > now) {
@@ -124,12 +113,16 @@ export class SchedulerService {
           socket,
           true,
         );
-        await this.houseService.findByIdAndUpdate(house.id, {
-          owner: house.nextOwner,
-          nextOwner: '',
-          auction: 0,
-          state: 'owned',
-        });
+        await this.houseService.findByIdAndUpdate(
+          house.id,
+          {
+            owner: house.nextOwner,
+            nextOwner: '',
+            auction: 0,
+            state: 'owned',
+          },
+          socket,
+        );
       }
     }
 

@@ -60,10 +60,6 @@ export class PlayerService {
     return await this.playerModel.findByIdAndUpdate(playerId, update);
   }
 
-  update(id: number) {
-    return `This action updates a #${id} player`;
-  }
-
   deleteOneFromLobby(userId: string, lobbyId: string): Promise<any> {
     return this.playerModel.deleteOne({ user: userId, lobby: lobbyId });
   }

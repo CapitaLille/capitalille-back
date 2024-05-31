@@ -140,6 +140,9 @@ export class ServerGateway
           const dice = this.playerService.generateDice(player);
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice.diceValue, map, player);
+          await socket.emit(GameEvent.PLAYER_UPDATE, {
+            player: newPlayer,
+          });
           console.log(path, salary, newPlayer);
           await this.serverService.mandatoryAction(
             map,
@@ -242,10 +245,14 @@ export class ServerGateway
 
           promises = [];
           promises.push(
-            this.houseService.findByIdAndUpdate(house.id, {
-              nextOwner: player.id,
-              auction: newAuction,
-            }),
+            this.houseService.findByIdAndUpdate(
+              house.id,
+              {
+                nextOwner: player.id,
+                auction: newAuction,
+              },
+              socket,
+            ),
           );
           promises.push(
             socket
