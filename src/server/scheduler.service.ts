@@ -6,9 +6,8 @@ import { houseState } from 'src/house/house.schema';
 import { HouseService } from 'src/house/house.service';
 import { Lobby } from 'src/lobby/lobby.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
-import { CaseType } from 'src/map/map.schema';
 import { MapService } from 'src/map/map.service';
-import { transactionType } from 'src/player/player.schema';
+import { moneyTransactionType } from 'src/player/player.schema';
 import { PlayerService } from 'src/player/player.service';
 import { ServerService } from 'src/server/server.service';
 import { Doc, Bank, GameEvent } from 'src/server/server.type';
@@ -102,16 +101,21 @@ export class SchedulerService {
       if (house.state !== houseState.OWNED) {
         let auction = house.auction;
         if (house.auction === 0) {
-          // Selling to the bank.
+          // Nobody make an auction. Selling to the bank.
           auction = house.price[house.level];
         }
         await this.serverService.playerMoneyTransaction(
           auction,
           house.owner !== '' ? house.owner : Bank.id,
           house.nextOwner !== '' ? house.nextOwner : Bank.id,
-          transactionType.HOUSE_TRANSACTION,
+          moneyTransactionType.HOUSE_TRANSACTION,
           socket,
-          true,
+          {
+            socketEmitSourcePlayer: false,
+            socketEmitTargetPlayer: false,
+            forceTransaction: true,
+            createTransactionDocument: true,
+          },
         );
         await this.houseService.findByIdAndUpdate(
           house.id,

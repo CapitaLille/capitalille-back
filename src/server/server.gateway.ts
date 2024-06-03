@@ -34,8 +34,8 @@ import mongoose from 'mongoose';
 import { ServerService } from './server.service';
 import {
   PlayerEvent,
+  moneyTransactionType,
   playerVaultType,
-  transactionType,
 } from 'src/player/player.schema';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler.service';
@@ -143,8 +143,7 @@ export class ServerGateway
           await socket.emit(GameEvent.PLAYER_UPDATE, {
             player: newPlayer,
           });
-          console.log(path, salary, newPlayer);
-          await this.serverService.mandatoryAction(
+          const action = await this.serverService.mandatoryAction(
             map,
             newPlayer.id,
             false,
@@ -154,6 +153,7 @@ export class ServerGateway
             diceBonuses: dice.diceBonuses,
             path,
             salary,
+            action,
           });
         },
       );
@@ -223,8 +223,14 @@ export class ServerGateway
                 house.auction,
                 Bank.id,
                 house.nextOwner,
-                transactionType.AUCTION,
+                moneyTransactionType.AUCTION,
                 socket,
+                {
+                  socketEmitSourcePlayer: true,
+                  socketEmitTargetPlayer: true,
+                  createTransactionDocument: false,
+                  forceTransaction: true,
+                },
               ),
             );
           }
@@ -233,8 +239,14 @@ export class ServerGateway
               newAuction,
               player.id,
               Bank.id,
-              transactionType.AUCTION,
+              moneyTransactionType.AUCTION,
               socket,
+              {
+                socketEmitSourcePlayer: true,
+                socketEmitTargetPlayer: true,
+                createTransactionDocument: false,
+                forceTransaction: true,
+              },
             ),
           );
           await Promise.all(promises);
@@ -291,7 +303,7 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.BANK_LOAN_TAKE,
             undefined,
             player.id,
@@ -335,7 +347,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_FRAUD,
             data.houseIndex,
             player.id,
@@ -379,7 +391,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_PAY,
             data.houseIndex,
             player.id,
@@ -411,7 +423,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.METRO_PAY,
             undefined,
             player.id,
@@ -437,7 +449,7 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.BUS_PAY,
             undefined,
             player.id,
@@ -466,7 +478,7 @@ export class ServerGateway
           if (map.cases[player.casePosition].type !== CaseType.MONUMENTS) {
             throw new ForbiddenException('Player is not on a monuments case');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.MONUMENTS_PAY,
             undefined,
             player.id,
@@ -495,7 +507,7 @@ export class ServerGateway
           if (map.cases[player.casePosition].type !== CaseType.COPS) {
             throw new ForbiddenException('Player is not on a cops case');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.COPS_COMPLAINT,
             data.targetPlayerId,
             player.id,
@@ -524,7 +536,7 @@ export class ServerGateway
           if (map.cases[player.casePosition].type !== CaseType.SCHOOL) {
             throw new ForbiddenException('Player is not on a school case');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.SCHOOL_PAY,
             undefined,
             player.id,
@@ -561,7 +573,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.CASINO_GAMBLE,
             undefined,
             player.id,

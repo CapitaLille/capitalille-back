@@ -26,6 +26,9 @@ export class User {
   @Prop({ required: false, default: '' })
   pp: string;
 
+  @Prop({ required: false, default: 0, min: 0 })
+  trophies: number;
+
   @Prop({ required: true, default: [] })
   notifications: Notification[];
 }

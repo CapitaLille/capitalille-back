@@ -1,6 +1,9 @@
 import e from 'express';
 import mongoose from 'mongoose';
-import { transactionType } from 'src/player/player.schema';
+import {
+  moneyTransactionType,
+  ratingTransactionType,
+} from 'src/player/player.schema';
 
 export class GameError<T> {
   event: string;
@@ -28,11 +31,15 @@ export enum GameEvent {
   PLAY_TURN = 'playTurn', // Return player's diceBonuses, path, salary and last case gameEvent.
   PLAYER_UPDATE = 'playerUpdate',
   MONEY_CHANGE = 'moneyChange',
+  RATING_CHANGE = 'ratingChange',
   AUCTION_SET = 'auctionSet',
   AUCTION_EXIT = 'auctionExit',
   LOST_GAME = 'lostGame',
   NEXT_TURN = 'nextTurn',
   END_GAME = 'endGame',
+  CASINO_LOST = 'casinoLost',
+  CASINO_WIN = 'casinoWin',
+  NOT_ENOUGH_MONEY = 'notEnoughMoney',
   BANK_LOAN_REQUEST = 'bankLoanRequest', // Request a choise (a loan to the bank or pass)
   BANK_LOAN_REFUND = 'bankLoanRefund', // Refund a loan to the bank.
   HOUSE_RENT_REQUEST = 'houseRent', // Propose to fraud a player or pay rent.
@@ -57,9 +64,33 @@ export class MoneyChangeData {
   from: string | 'bank';
   to: string | 'bank';
   amount: number;
-  type: transactionType;
+  type: moneyTransactionType;
 
-  constructor(from: string, to: string, amount: number, type: transactionType) {
+  constructor(
+    from: string,
+    to: string,
+    amount: number,
+    type: moneyTransactionType,
+  ) {
+    this.from = from;
+    this.to = to;
+    this.amount = amount;
+    this.type = type;
+  }
+}
+
+export class RatingChangeData {
+  from: string | 'bank';
+  to: string | 'bank';
+  amount: number;
+  type: ratingTransactionType;
+
+  constructor(
+    from: string,
+    to: string,
+    amount: number,
+    type: ratingTransactionType,
+  ) {
     this.from = from;
     this.to = to;
     this.amount = amount;

@@ -10,7 +10,12 @@ import {
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, UpdateQuery } from 'mongoose';
-import { Player, playerVaultType, transactionType } from './player.schema';
+import {
+  Player,
+  moneyTransactionType,
+  playerVaultType,
+  ratingTransactionType,
+} from './player.schema';
 import { lobbyConstants } from 'src/user/constants';
 import { Bank, Doc, GameEvent, MoneyChangeData } from 'src/server/server.type';
 import { ServerService } from 'src/server/server.service';
@@ -91,7 +96,7 @@ export class PlayerService {
       (bonus) => bonus === playerVaultType.diploma,
     ).length;
     return (
-      map.configuration.salary + map.configuration.diplomeBonus * diplomeCount
+      map.configuration.salary + map.configuration.school.bonus * diplomeCount
     );
   }
 
@@ -155,7 +160,7 @@ export class PlayerService {
     fromPlayerId: string,
     amount: number,
     targetPlayerId: string,
-    type: transactionType,
+    type: moneyTransactionType | ratingTransactionType,
   ) {
     try {
       if (amount <= 0) {
