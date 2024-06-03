@@ -25,8 +25,9 @@ import { MapService } from 'src/map/map.service';
 import {
   Player,
   PlayerEvent,
+  moneyTransactionType,
   playerVaultType,
-  transactionType,
+  ratingTransactionType,
 } from 'src/player/player.schema';
 import { Server } from 'socket.io';
 import { PlayerService } from 'src/player/player.service';
@@ -37,6 +38,7 @@ import {
   GameEvent,
   MoneyChangeData,
   PlayerSocketId,
+  RatingChangeData,
 } from './server.type';
 import { House, houseState } from 'src/house/house.schema';
 import { nanoid } from 'nanoid';
@@ -232,9 +234,14 @@ export class ServerService {
               loanValue,
               player.id,
               Bank.id,
-              transactionType.LOAN_REPAY,
+              moneyTransactionType.LOAN_REPAY,
               socket,
-              true,
+              {
+                socketEmitSourcePlayer: false,
+                socketEmitTargetPlayer: false,
+                createTransactionDocument: true,
+                forceTransaction: true,
+              },
             );
             await this.playerService.findByIdAndUpdate(player.id, {
               $pull: { bonuses: playerVaultType.loan },
@@ -258,9 +265,14 @@ export class ServerService {
                 cost,
                 player,
                 house.owner,
-                transactionType.RENT,
+                moneyTransactionType.RENT,
                 socket,
-                true,
+                {
+                  socketEmitSourcePlayer: false,
+                  socketEmitTargetPlayer: true,
+                  createTransactionDocument: true,
+                  forceTransaction: true,
+                },
               );
             }
             await this.playerService.findByIdAndUpdate(player.id, {
@@ -307,18 +319,26 @@ export class ServerService {
    * @param type Type of transaction
    * @param socket Socket to emit the transaction
    * @param createTransactionDocument Create a transaction document (default: false)
-   * @param announceFromPlayer Announce the transaction from the source player (default: true)
-   * @param announceToPlayer Announce the transaction to the destination player (default: true)
+   * @param force Force the transaction even if the source player doesn't have enough money (default: false)
+   * @param socketEmit Socket emit configuration (default: { fromPlayer: true, toPlayer: true })
    */
   async playerMoneyTransaction(
     amount: number,
     fromPlayer: Doc<Player> | string,
     toPlayer: Doc<Player> | string,
-    type: transactionType,
+    type: moneyTransactionType,
     socket: ServerGuardSocket | Server,
-    createTransactionDocument: boolean = false,
-    announceFromPlayer: boolean = true,
-    announceToPlayer: boolean = true,
+    data: {
+      socketEmitSourcePlayer: boolean;
+      socketEmitTargetPlayer: boolean;
+      createTransactionDocument: boolean;
+      forceTransaction: boolean;
+    } = {
+      socketEmitSourcePlayer: true,
+      socketEmitTargetPlayer: true,
+      createTransactionDocument: false,
+      forceTransaction: false,
+    },
   ) {
     if (fromPlayer === '' || toPlayer === '') {
       throw new BadRequestException('Player ID cannot be empty');
@@ -333,17 +353,19 @@ export class ServerService {
         newFromPlayer = await this.playerService.findOneById(
           fromPlayer.toString(),
         );
+        if (!data.forceTransaction && newFromPlayer.money < amount) {
+          const targetSocketId = await this.getSocketId(newToPlayer.id);
+          socket.to(targetSocketId).emit(GameEvent.NOT_ENOUGH_MONEY);
+          throw new ForbiddenException('Not enough money');
+        }
       }
 
       if (typeof fromPlayer === typeof '' && fromPlayer !== Bank.id) {
         await this.playerService.findByIdAndUpdate(newFromPlayer.id, {
           $inc: { money: -amount },
         });
-        if (announceFromPlayer) {
-          const targetSocketId = 'ovk';
-          //  await this.serverService.getSocketId(
-          //   newFromPlayer.id,
-          // );
+        if (data.socketEmitSourcePlayer) {
+          const targetSocketId = await this.getSocketId(newFromPlayer.id);
           await socket
             .to(targetSocketId)
             .emit(
@@ -362,11 +384,8 @@ export class ServerService {
           $inc: { money: amount },
         });
         console.log(newToPlayer, 'newToPlayer', 'amount', amount, 'type', type);
-        if (announceToPlayer) {
-          const targetSocketId = 'ijei';
-          //  await this.serverService.getSocketId(
-          //   newToPlayer.id,
-          // );
+        if (data.socketEmitTargetPlayer) {
+          const targetSocketId = await this.getSocketId(newToPlayer.id);
           socket
             .to(targetSocketId)
             .emit(
@@ -380,11 +399,11 @@ export class ServerService {
             );
         }
       }
-      if (createTransactionDocument) {
+      if (data.createTransactionDocument) {
         await this.playerService.generateTransaction(
-          newFromPlayer.user,
+          newFromPlayer?.id ? newFromPlayer.id : Bank.id,
           amount, // from player deduction
-          newToPlayer.user,
+          newToPlayer?.id ? newToPlayer.id : Bank.id,
           type,
         );
       }
@@ -396,8 +415,38 @@ export class ServerService {
     }
   }
 
+  async playerRatingTransaction(
+    amount: number,
+    playerId: string,
+    socket: ServerGuardSocket | Server,
+  ) {
+    const player = await this.playerService.findOneById(playerId);
+    let newRating = player.rating + amount;
+    if (newRating < 0) {
+      newRating = 0;
+    }
+    if (newRating > 5) {
+      newRating = 5;
+    }
+    const targetSocketId = await this.getSocketId(player.id);
+    await socket
+      .to(targetSocketId)
+      .emit(
+        GameEvent.RATING_CHANGE,
+        new RatingChangeData(
+          amount > 0 ? Bank.id : player.id,
+          amount > 0 ? player.id : Bank.id,
+          amount,
+          ratingTransactionType.MONUMENTS_RATING,
+        ),
+      );
+    return await this.playerService.findByIdAndUpdate(player.id, {
+      rating: newRating,
+    });
+  }
+
   /**
-   *
+   * Choose an event and apply it to the player.
    * @param caseEventType
    * @param playerId
    * @param map
@@ -458,34 +507,286 @@ export class ServerService {
     return caseEventType;
   }
 
-  async mapEventAction(
+  /**
+   * In case of a player answering a case event.
+   * @param caseEventType
+   * @param attachedId
+   * @param playerId
+   * @param socket
+   */
+  async playerAction(
     caseEventType: PlayerEvent,
     attachedId: string | number, // Potential houseIndex, playerId, etc.
     playerId: string,
     socket: ServerGuardSocket,
   ) {
     const player = await this.playerService.findOneById(playerId);
+    const lobby = await this.lobbyService.findOne(player.lobby);
+    const map = await this.mapService.findOne(lobby.map);
+
     if (!player.turnPlayed) {
       throw new ForbiddenException('You need to play your turn first.');
     }
     if (player.lost) {
-      throw new ForbiddenException("You can't play, you lost");
+      throw new ForbiddenException(
+        "You can't play anymore because you lost the game.",
+      );
     }
     switch (caseEventType) {
       case PlayerEvent.CASINO_GAMBLE:
+        await this.casinoGamble(player, map, socket);
         break;
       case PlayerEvent.MONUMENTS_PAY:
+        await this.monumetsPay(player, map, socket);
         break;
       case PlayerEvent.COPS_COMPLAINT:
+        await this.copsComplaint(playerId, attachedId as string, map, socket);
         break;
       case PlayerEvent.SCHOOL_PAY:
+        await this.schoolPay(player, map, socket);
         break;
       case PlayerEvent.BUS_PAY:
+        if (player.money < map.configuration.busPrice) {
+          socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+          throw new ForbiddenException('Not enough money');
+        }
+        await this.playerMoneyTransaction(
+          map.configuration.busPrice,
+          player.id,
+          Bank.id,
+          moneyTransactionType.BUS,
+          socket,
+          {
+            socketEmitSourcePlayer: true,
+            socketEmitTargetPlayer: true,
+            createTransactionDocument: true,
+            forceTransaction: false,
+          },
+        );
+        await this.teleportPlayer(player.id, socket);
         break;
       case PlayerEvent.METRO_PAY:
+        if (player.money < map.configuration.metroPrice) {
+          socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+          throw new ForbiddenException('Not enough money');
+        }
+        await this.playerMoneyTransaction(
+          map.configuration.metroPrice,
+          player.id,
+          Bank.id,
+          moneyTransactionType.METRO,
+          socket,
+          {
+            socketEmitSourcePlayer: true,
+            socketEmitTargetPlayer: true,
+            createTransactionDocument: true,
+            forceTransaction: false,
+          },
+        );
+        await this.teleportPlayer(player.id, socket);
         break;
       case PlayerEvent.HOUSE_RENT_PAY:
+        await this.houseRent(player, attachedId as number, map, socket, false);
+        break;
+      case PlayerEvent.HOUSE_RENT_FRAUD:
+        await this.houseRent(player, attachedId as number, map, socket, true);
         break;
     }
+  }
+
+  async casinoGamble(
+    player: Doc<Player>,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const random = Math.random();
+    await this.playerMoneyTransaction(
+      map.configuration.casino.value,
+      player.id,
+      Bank.id,
+      moneyTransactionType.CASINO,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: false,
+      },
+    );
+    const { chance, value } = map.configuration.casino;
+    const targetSocketId = await this.getSocketId(player.id);
+    if (random < chance) {
+      const money = (1 / chance) * value;
+      await socket.to(targetSocketId).emit(GameEvent.CASINO_WIN);
+      await this.playerMoneyTransaction(
+        money,
+        Bank.id,
+        player.id,
+        moneyTransactionType.CASINO,
+        socket,
+        {
+          socketEmitSourcePlayer: true,
+          socketEmitTargetPlayer: true,
+          createTransactionDocument: true,
+          forceTransaction: false,
+        },
+      );
+    } else {
+      await socket.to(targetSocketId).emit(GameEvent.CASINO_LOST);
+    }
+  }
+
+  async monumetsPay(
+    player: Doc<Player>,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const monument = map.monuments.find((e) => {
+      if (e.cases.includes(player.casePosition)) {
+        return true;
+      }
+    });
+    if (player.money < monument.price) {
+      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+      throw new ForbiddenException('Not enough money');
+    }
+    await this.playerMoneyTransaction(
+      monument.price,
+      player.id,
+      Bank.id,
+      moneyTransactionType.MONUMENTS_PAY,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: false,
+      },
+    );
+    await this.playerRatingTransaction(monument.bonus, player.id, socket);
+    await this.playerService.generateTransaction(
+      Bank.id,
+      monument.bonus,
+      player.id,
+      ratingTransactionType.MONUMENTS_RATING,
+    );
+  }
+
+  async houseRent(
+    player: Doc<Player>,
+    houseIndex: number,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+    fraud: boolean = false,
+  ) {
+    const house = await this.houseService.findOne(player.lobby, houseIndex);
+    let cost = house.rent[house.level];
+    if (fraud) {
+      const random = Math.random();
+      if (random < map.configuration.fraudChance) {
+        await this.playerService.generateTransaction(
+          player.id,
+          0,
+          house.owner,
+          moneyTransactionType.RENT_FRAUD,
+        );
+        return;
+      } else {
+        await this.playerMoneyTransaction(
+          cost * 2,
+          player.id,
+          house.owner,
+          moneyTransactionType.RENT_FINED,
+          socket,
+          {
+            socketEmitSourcePlayer: true,
+            socketEmitTargetPlayer: true,
+            createTransactionDocument: true,
+            forceTransaction: true,
+          },
+        );
+        return;
+      }
+    }
+    await this.playerMoneyTransaction(
+      cost,
+      player.id,
+      house.owner,
+      moneyTransactionType.RENT,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: true,
+      },
+    );
+  }
+
+  async copsComplaint(
+    sourcePlayerId: string,
+    targetPlayerId: string,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const cops = map.configuration.copsMalus;
+    await this.playerRatingTransaction(-cops, targetPlayerId, socket);
+    const targetSocketId = await this.getSocketId(targetPlayerId);
+    await socket
+      .to(targetSocketId)
+      .emit(
+        GameEvent.RATING_CHANGE,
+        new RatingChangeData(
+          sourcePlayerId,
+          targetPlayerId,
+          cops,
+          ratingTransactionType.COPS_RATING,
+        ),
+      );
+    await this.playerService.generateTransaction(
+      sourcePlayerId,
+      cops,
+      targetPlayerId,
+      ratingTransactionType.COPS_RATING,
+    );
+  }
+
+  async schoolPay(
+    player: Doc<Player>,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    if (player.money < map.configuration.school.cost) {
+      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+      throw new ForbiddenException('Not enough money');
+    }
+    await this.playerMoneyTransaction(
+      map.configuration.school.cost,
+      player.id,
+      Bank.id,
+      moneyTransactionType.SCHOOL,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: false,
+      },
+    );
+    await this.playerService.findByIdAndUpdate(player.id, {
+      $push: { bonuses: playerVaultType.diploma },
+    });
+  }
+
+  async teleportPlayer(playerId: string, socket: ServerGuardSocket) {
+    const player = await this.playerService.findOneById(playerId);
+    const lobby = await this.lobbyService.findOne(player.lobby);
+    const map = await this.mapService.findOne(lobby.map);
+    const targetCaseIndex = map.cases[player.casePosition].nextStationCaseIndex;
+    await this.playerService.findByIdAndUpdate(player.id, {
+      casePosition: targetCaseIndex,
+    });
+    const targetSocketId = await this.getSocketId(player.id);
+    await socket.to(targetSocketId).emit(GameEvent.PLAYER_UPDATE, { player });
   }
 }

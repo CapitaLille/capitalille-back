@@ -39,6 +39,12 @@ export class Case {
 
   @Prop({ required: true, type: [Number] })
   coordinates: [number, number];
+
+  @Prop({ required: false })
+  nextStationCaseIndex: number;
+
+  @Prop({ required: false })
+  linkedHouseIndex: number;
 }
 
 export enum CaseType {
@@ -91,9 +97,6 @@ export class Configuration {
   @Prop({ required: true, type: { tax: Number, value: Number } })
   bank: { tax: number; value: number };
 
-  @Prop({ required: false, default: 50000 })
-  diplomeBonus: number;
-
   @Prop({ required: true })
   maxPlayer: number;
 
@@ -116,14 +119,37 @@ export class Configuration {
     electricity: number;
   };
 
-  @Prop({ required: true })
-  parkRatingBonus: number; // 0 to 5
+  @Prop({
+    required: false,
+    default: { value: 2, chance: 0.5 },
+    type: { value: Number, chance: Number },
+  })
+  casino: { value: number; chance: number };
+
+  @Prop({ required: false, default: 0.1 })
+  copsMalus: number;
+
+  @Prop({
+    required: false,
+    default: { cost: 100000, bonus: 50000 },
+    type: { cost: Number, bonus: Number },
+  })
+  school: { cost: number; bonus: number };
 
   @Prop({ required: false, default: 0 })
   price: number;
 
   @Prop({ required: false, default: 3 })
   playerRange: number;
+
+  @Prop({ required: false, default: 100000 })
+  metroPrice: number;
+
+  @Prop({ required: false, default: 100000 })
+  busPrice: number;
+
+  @Prop({ required: false, default: 0.3 })
+  fraudChance: number;
 
   @Prop({ required: false, default: 10 })
   auctionStepPourcent: number; // 0 to 100
