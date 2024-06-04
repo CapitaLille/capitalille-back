@@ -63,6 +63,12 @@ export class UserController {
     return await this.userService.remove(targetId);
   }
 
+  @Get('friends')
+  async getFriends(@Request() req) {
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.userService.getFriends(req.user.data.sub);
+  }
+
   @Post('notification/:notif_id')
   async answerNotification(
     @Request() req,

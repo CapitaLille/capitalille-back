@@ -25,6 +25,7 @@ export class LobbyService {
     private readonly userService: UserService,
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
+
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -191,6 +192,20 @@ export class LobbyService {
 
   async findAll() {
     return await this.lobbyModel.find();
+  }
+
+  async findAllFromUser(userId: string, page: number = 0) {
+    const lobbies = await this.lobbyModel
+      .find({ $in: { users: userId } })
+      .sort({ startTime: -1 })
+      .skip(page * 10)
+      .limit(10)
+      .exec();
+    const extendedLobbies = [];
+    for (const lobby of lobbies) {
+      const users = await this.userService.findSomeFromLobby(lobby.id, 3);
+      extendedLobbies.push({ lobby, users });
+    }
   }
 
   async findOne(lobbyId: string) {

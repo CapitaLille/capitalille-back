@@ -176,6 +176,13 @@ export class UserService {
     return HttpStatus.OK;
   }
 
+  async findSomeFromLobby(lobbyId: string, limit: number = -1) {
+    if (limit === -1) {
+      return await this.userModel.find({ lobbies: lobbyId }).exec();
+    }
+    return await this.userModel.find({ $in: lobbyId }).limit(limit).exec();
+  }
+
   async answerNotification(
     userId: string,
     notificationId: string, // nanoid.
@@ -244,6 +251,14 @@ export class UserService {
     }
     await this.userModel.findByIdAndDelete(userId);
     return HttpStatus.OK;
+  }
+
+  async getFriends(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return await this.userModel.find({ _id: { $in: user.friends } });
   }
 
   async updateUserPassword(email: string, newPassword: string) {

@@ -28,8 +28,10 @@ export class LobbyController {
   }
 
   @Get()
-  async findAll() {
-    return await this.lobbyService.findAll();
+  @UseGuards(AuthGuard)
+  async findAll(@Request() req, @Body() page: number) {
+    if (!page) page = 0;
+    return await this.lobbyService.findAllFromUser(req.user.data.sub, page);
   }
 
   @Get(':lobbyId')
