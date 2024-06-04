@@ -33,6 +33,7 @@ import { Server } from 'socket.io';
 import { PlayerService } from 'src/player/player.service';
 import { ServerGuardSocket } from './server.gateway';
 import {
+  AuctionData,
   Bank,
   Doc,
   GameEvent,
@@ -44,6 +45,12 @@ import { House, houseState } from 'src/house/house.schema';
 import { nanoid } from 'nanoid';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
+import { UserService } from 'src/user/user.service';
+import {
+  Achievement,
+  AchievementLevel,
+  AchievementType,
+} from 'src/user/user.schema';
 
 @Injectable()
 /**
@@ -55,6 +62,7 @@ export class ServerService {
     private readonly lobbyService: LobbyService,
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
+    private readonly userService: UserService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -383,6 +391,10 @@ export class ServerService {
         await this.playerService.findByIdAndUpdate(newToPlayer.id, {
           $inc: { money: amount },
         });
+        await this.userService.statisticsUpdate(
+          newToPlayer.user,
+          AchievementType.payMe,
+        );
         console.log(newToPlayer, 'newToPlayer', 'amount', amount, 'type', type);
         if (data.socketEmitTargetPlayer) {
           const targetSocketId = await this.getSocketId(newToPlayer.id);
@@ -591,7 +603,134 @@ export class ServerService {
       case PlayerEvent.HOUSE_RENT_FRAUD:
         await this.houseRent(player, attachedId as number, map, socket, true);
         break;
+      case PlayerEvent.BUY_AUCTION:
+        await this.buyAuctionHouse(
+          lobby,
+          player,
+          attachedId as number,
+          map,
+          socket,
+        );
+        break;
     }
+  }
+
+  async buyAuctionHouse(
+    lobby: Doc<Lobby>,
+    player: Doc<Player>,
+    houseIndex: number,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const house = await this.houseService.findOne(lobby.id, houseIndex);
+    const nearestCases = this.mapService.getNearestCases(
+      map,
+      player.casePosition,
+    );
+    if (
+      !nearestCases.some((element) =>
+        map.houses[houseIndex].cases.includes(element),
+      )
+    ) {
+      socket.emit(GameEvent.ERROR, {
+        message: 'House is too far away',
+      });
+      throw new ForbiddenException(
+        'House is too far away, nearest : ' +
+          nearestCases.join(', ') +
+          '. Player pos : ' +
+          player.casePosition +
+          '. House pos : ' +
+          map.houses[houseIndex].cases.join(','),
+      );
+    }
+    if (house.state !== 'free' && house.state !== 'sale') {
+      socket.emit(GameEvent.ERROR, {
+        message: 'House is not for sale',
+      });
+      throw new ForbiddenException('House is not for sale');
+    }
+    const actualAuction = house.auction;
+    const newAuction = this.houseService.getAuctionPrice(map, house);
+    if (player.money < newAuction) {
+      socket.emit(GameEvent.ERROR, {
+        message: 'Player does not have enough money',
+      });
+      throw new ForbiddenException('Player does not have enough money');
+    }
+    let promises = [];
+
+    if (house.nextOwner !== '') {
+      console.log('refund', house.nextOwner, house.auction);
+      promises.push(
+        this.playerMoneyTransaction(
+          house.auction,
+          Bank.id,
+          house.nextOwner,
+          moneyTransactionType.AUCTION,
+          socket,
+          {
+            socketEmitSourcePlayer: true,
+            socketEmitTargetPlayer: true,
+            createTransactionDocument: false,
+            forceTransaction: true,
+          },
+        ),
+      );
+    }
+    promises.push(
+      this.playerMoneyTransaction(
+        newAuction,
+        player.id,
+        Bank.id,
+        moneyTransactionType.AUCTION,
+        socket,
+        {
+          socketEmitSourcePlayer: true,
+          socketEmitTargetPlayer: true,
+          createTransactionDocument: false,
+          forceTransaction: true,
+        },
+      ),
+    );
+    await Promise.all(promises);
+
+    const targetSocketId = await this.getSocketId(house.nextOwner);
+
+    promises = [];
+    promises.push(
+      this.houseService.findByIdAndUpdate(
+        house.id,
+        {
+          nextOwner: player.id,
+          auction: newAuction,
+        },
+        socket,
+      ),
+    );
+    promises.push(
+      socket
+        .to(targetSocketId)
+        .emit(
+          GameEvent.AUCTION_EXIT,
+          new AuctionData(houseIndex, player.id, newAuction),
+        ),
+    );
+    promises.push(
+      socket
+        .to(lobby.id)
+        .emit(
+          GameEvent.AUCTION_SET,
+          new AuctionData(houseIndex, player.user, newAuction),
+        ),
+    );
+    promises.push(
+      this.userService.statisticsUpdate(
+        player.user,
+        AchievementType.auctionBuyer,
+      ),
+    );
+    await Promise.all(promises);
   }
 
   async casinoGamble(
@@ -634,6 +773,10 @@ export class ServerService {
     } else {
       await socket.to(targetSocketId).emit(GameEvent.CASINO_LOST);
     }
+    await this.userService.statisticsUpdate(
+      player.user,
+      AchievementType.gambler,
+    );
   }
 
   async monumetsPay(
@@ -670,6 +813,10 @@ export class ServerService {
       player.id,
       ratingTransactionType.MONUMENTS_RATING,
     );
+    await this.userService.statisticsUpdate(
+      player.user,
+      AchievementType.monumentsRestorer,
+    );
   }
 
   async houseRent(
@@ -680,7 +827,7 @@ export class ServerService {
     fraud: boolean = false,
   ) {
     const house = await this.houseService.findOne(player.lobby, houseIndex);
-    let cost = house.rent[house.level];
+    const cost = house.rent[house.level];
     if (fraud) {
       const random = Math.random();
       if (random < map.configuration.fraudChance) {
@@ -689,6 +836,10 @@ export class ServerService {
           0,
           house.owner,
           moneyTransactionType.RENT_FRAUD,
+        );
+        await this.userService.statisticsUpdate(
+          player.user,
+          AchievementType.frauder,
         );
         return;
       } else {
@@ -749,6 +900,11 @@ export class ServerService {
       targetPlayerId,
       ratingTransactionType.COPS_RATING,
     );
+    const sourcePlayer = await this.playerService.findOneById(sourcePlayerId);
+    await this.userService.statisticsUpdate(
+      sourcePlayer.user,
+      AchievementType.copsComplainer,
+    );
   }
 
   async schoolPay(
@@ -776,6 +932,10 @@ export class ServerService {
     await this.playerService.findByIdAndUpdate(player.id, {
       $push: { bonuses: playerVaultType.diploma },
     });
+    await this.userService.statisticsUpdate(
+      player.user,
+      AchievementType.student,
+    );
   }
 
   async teleportPlayer(playerId: string, socket: ServerGuardSocket) {
@@ -788,5 +948,9 @@ export class ServerService {
     });
     const targetSocketId = await this.getSocketId(player.id);
     await socket.to(targetSocketId).emit(GameEvent.PLAYER_UPDATE, { player });
+    await this.userService.statisticsUpdate(
+      player.user,
+      AchievementType.teleport,
+    );
   }
 }

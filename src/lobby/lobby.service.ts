@@ -16,6 +16,7 @@ import { HouseService } from 'src/house/house.service';
 import { MapService } from 'src/map/map.service';
 import { CreateLobbyHousesDto } from 'src/house/dto/create-lobby-houses.dto';
 import { Doc } from 'src/server/server.type';
+import { AchievementType } from 'src/user/user.schema';
 
 @Injectable()
 export class LobbyService {
@@ -86,6 +87,10 @@ export class LobbyService {
       };
       await Promise.all(operations);
       await newLobby.save();
+      await this.userService.statisticsUpdate(
+        ownerId,
+        AchievementType.gameCreator,
+      );
       await this.houseService.generateLobbyHouses(createLobbyHousesDto),
         await session.commitTransaction();
     } catch (error) {
