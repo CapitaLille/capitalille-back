@@ -9,7 +9,12 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { ClientSession, Model, startSession } from 'mongoose';
-import { User } from './user.schema';
+import {
+  Achievement,
+  AchievementClass,
+  AchievementType,
+  User,
+} from './user.schema';
 import * as bcrypt from 'bcrypt';
 import { bcryptConstants } from './constants';
 import { CreatePushDto } from './dto/create-push.dto';
@@ -220,6 +225,249 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     await this.userModel.findByIdAndUpdate(userId, updateUserDto);
+    return HttpStatus.OK;
+  }
+
+  async statisticsUpdate(userId: string, achievement: Achievement) {
+    switch (achievement) {
+      case AchievementType.auctionWinner:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { auctionsWon: 1 },
+        });
+        break;
+      case AchievementType.auctionBuyer:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { auctionsBought: 1 },
+        });
+        break;
+      case AchievementType.copsComplainer:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { copsComplained: 1 },
+        });
+        break;
+      case AchievementType.diceLauncher:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { dicesLaunched: 1 },
+        });
+        break;
+      case AchievementType.gameCreator:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { gamesCreated: 1 },
+        });
+        break;
+      case AchievementType.monumentsRestorer:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { monumentsRestored: 1 },
+        });
+        break;
+      case AchievementType.payMe:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { moneyReceived: 1 },
+        });
+        break;
+      case AchievementType.playGame:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { gamesPlayed: 1 },
+        });
+        break;
+      case AchievementType.winGame:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { gamesWon: 1 },
+        });
+        break;
+      case AchievementType.gambler:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { casinos: 1 },
+        });
+        break;
+      case AchievementType.liveOnLoan:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { loans: 1 },
+        });
+        break;
+      case AchievementType.frauder:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { rentFraud: 1 },
+        });
+        break;
+      default:
+        throw new ConflictException('Invalid achievement');
+    }
+    return HttpStatus.OK;
+  }
+
+  async claimAchievement(
+    userId: string,
+    achievement: AchievementType,
+    level: number,
+  ) {
+    const levelCount = [1, 10, 100, 250, 500];
+    if (level < 0 || level > 4) {
+      throw new ConflictException('Invalid achievement level');
+    }
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let achievementClass;
+    switch (achievement) {
+      case AchievementType.auctionWinner:
+        achievementClass = Achievement.auctionWinner;
+        if (user.statistics.auctionsWon < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough auctions won to claim this achievement.",
+          );
+        }
+        if (!Achievement.auctionWinner.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.auctionBuyer:
+        achievementClass = Achievement.auctionBuyer;
+        if (user.statistics.auctionsBought < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough auctions bought to claim this achievement.",
+          );
+        }
+        if (!Achievement.auctionBuyer.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.copsComplainer:
+        achievementClass = Achievement.copsComplainer;
+        if (user.statistics.complaints < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough cops complained to claim this achievement.",
+          );
+        }
+        if (!Achievement.copsComplainer.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.diceLauncher:
+        achievementClass = Achievement.diceLauncher;
+        if (user.statistics.dicesLaunched < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough dices launched to claim this achievement.",
+          );
+        }
+        if (!Achievement.diceLauncher.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.gameCreator:
+        achievementClass = Achievement.gameCreator;
+        if (user.statistics.gamesCreated < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough games created to claim this achievement.",
+          );
+        }
+        if (!Achievement.gameCreator.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.monumentsRestorer:
+        achievementClass = Achievement.monumentsRestorer;
+        if (user.statistics.monumentsRestored < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough monuments restored to claim this achievement.",
+          );
+        }
+        if (!Achievement.monumentsRestorer.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.payMe:
+        achievementClass = Achievement.payMe;
+        if (user.statistics.moneyReceived < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough money received to claim this achievement.",
+          );
+        }
+        if (!Achievement.payMe.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.playGame:
+        achievementClass = Achievement.playGame;
+        if (user.statistics.gamesPlayed < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough games played to claim this achievement.",
+          );
+        }
+        if (!Achievement.playGame.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.winGame:
+        achievementClass = Achievement.winGame;
+        if (user.statistics.gamesWon < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough games won to claim this achievement.",
+          );
+        }
+        if (!Achievement.winGame.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.gambler:
+        achievementClass = Achievement.gambler;
+        if (user.statistics.casinos < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough casinos to claim this achievement.",
+          );
+        }
+        if (!Achievement.gambler.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.liveOnLoan:
+        achievementClass = Achievement.liveOnLoan;
+        if (user.statistics.loans < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough loans to claim this achievement.",
+          );
+        }
+        if (!Achievement.liveOnLoan.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.frauder:
+        achievementClass = Achievement.frauder;
+        if (user.statistics.rentFraud < levelCount[level]) {
+          throw new ConflictException(
+            "You don't have enough rent fraud to claim this achievement.",
+          );
+        }
+        if (!Achievement.frauder.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      default:
+        throw new ConflictException('Invalid achievement');
+    }
+    const findAchievement = user.achievements.find(
+      (e) => e.name === achievement,
+    );
+    if (user.achievements.includes(achievementClass)) {
+      if (findAchievement.level.includes(level)) {
+        throw new ConflictException('Achievement already claimed');
+      }
+    }
+    if (level > 4) {
+      throw new ConflictException('Invalid achievement level');
+    }
+    const achievementInstance = new AchievementClass({
+      name: achievement,
+      level: [...findAchievement.level, level],
+    });
+    await this.userModel.findByIdAndUpdate(userId, {
+      $pull: { achievements: { name: achievementInstance.name } },
+    });
+    await this.userModel.findByIdAndUpdate(userId, {
+      $push: { achievements: achievementInstance },
+    });
     return HttpStatus.OK;
   }
 

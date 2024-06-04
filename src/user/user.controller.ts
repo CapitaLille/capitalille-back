@@ -21,6 +21,7 @@ import { ObjectId } from 'mongodb';
 import { idDto } from 'src/app.dto';
 import { ApiBadRequestResponse } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ClaimAchievementDto } from './dto/claim-achievement.dto';
 @Controller('user')
 @UseGuards(AuthGuard)
 export class UserController {
@@ -42,6 +43,19 @@ export class UserController {
   async update(@Request() req, @Body() updateUserDto: UpdateUserDto) {
     if (!req.user.data.sub) throw new BadRequestException('No UID provided');
     return await this.userService.update(req.user.data.sub, updateUserDto);
+  }
+
+  @Patch('achievements')
+  async updateAchievements(
+    @Request() req,
+    @Body() achievements: ClaimAchievementDto,
+  ) {
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.userService.claimAchievement(
+      req.user.data.sub,
+      achievements.achievements,
+      achievements.level,
+    );
   }
 
   @Patch('pp')

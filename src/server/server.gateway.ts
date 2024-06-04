@@ -41,6 +41,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler.service';
 import { CaseEventType, CaseType } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
+import { Achievement, AchievementType } from 'src/user/user.schema';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -130,7 +131,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
   ) {
-    console.log('playTurn', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
@@ -141,6 +141,10 @@ export class ServerGateway
           if (player.turnPlayed) {
             throw new ForbiddenException('Player already played his turn');
           }
+          this.userService.statisticsUpdate(
+            userId,
+            AchievementType.diceLauncher,
+          );
           const dice = this.playerService.generateDice(player);
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice.diceValue, map, player);
@@ -179,114 +183,12 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          const house = await this.houseService.findOne(
-            lobby.id,
+          await this.serverService.playerAction(
+            PlayerEvent.BUY_AUCTION,
             data.houseIndex,
+            player.id,
+            socket,
           );
-          const nearestCases = this.mapService.getNearestCases(
-            map,
-            player.casePosition,
-          );
-          if (
-            !nearestCases.some((element) =>
-              map.houses[data.houseIndex].cases.includes(element),
-            )
-          ) {
-            socket.emit(GameEvent.ERROR, {
-              message: 'House is too far away',
-            });
-            throw new ForbiddenException(
-              'House is too far away, nearest : ' +
-                nearestCases.join(', ') +
-                '. Player pos : ' +
-                player.casePosition +
-                '. House pos : ' +
-                map.houses[data.houseIndex].cases.join(','),
-            );
-          }
-          if (house.state !== 'free' && house.state !== 'sale') {
-            socket.emit(GameEvent.ERROR, {
-              message: 'House is not for sale',
-            });
-            throw new ForbiddenException('House is not for sale');
-          }
-          const actualAuction = house.auction;
-          const newAuction = this.houseService.getAuctionPrice(map, house);
-          if (player.money < newAuction) {
-            socket.emit(GameEvent.ERROR, {
-              message: 'Player does not have enough money',
-            });
-            throw new ForbiddenException('Player does not have enough money');
-          }
-          let promises = [];
-
-          if (house.nextOwner !== '') {
-            console.log('refund', house.nextOwner, house.auction);
-            promises.push(
-              this.serverService.playerMoneyTransaction(
-                house.auction,
-                Bank.id,
-                house.nextOwner,
-                moneyTransactionType.AUCTION,
-                socket,
-                {
-                  socketEmitSourcePlayer: true,
-                  socketEmitTargetPlayer: true,
-                  createTransactionDocument: false,
-                  forceTransaction: true,
-                },
-              ),
-            );
-          }
-          promises.push(
-            this.serverService.playerMoneyTransaction(
-              newAuction,
-              player.id,
-              Bank.id,
-              moneyTransactionType.AUCTION,
-              socket,
-              {
-                socketEmitSourcePlayer: true,
-                socketEmitTargetPlayer: true,
-                createTransactionDocument: false,
-                forceTransaction: true,
-              },
-            ),
-          );
-          await Promise.all(promises);
-
-          const targetSocketId = await this.serverService.getSocketId(
-            house.nextOwner,
-          );
-
-          promises = [];
-          promises.push(
-            this.houseService.findByIdAndUpdate(
-              house.id,
-              {
-                nextOwner: player.id,
-                auction: newAuction,
-              },
-              socket,
-            ),
-          );
-          promises.push(
-            socket
-              .to(targetSocketId)
-              .emit(
-                GameEvent.AUCTION_EXIT,
-                new AuctionData(data.houseIndex, player.id, newAuction),
-              ),
-          );
-          promises.push(
-            socket
-              .to(lobby.id)
-              .emit(
-                GameEvent.AUCTION_SET,
-                new AuctionData(data.houseIndex, userId, newAuction),
-              ),
-          );
-          await Promise.all(promises);
         },
       );
     } catch (error) {

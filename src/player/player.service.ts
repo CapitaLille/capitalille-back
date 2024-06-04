@@ -21,11 +21,13 @@ import { Bank, Doc, GameEvent, MoneyChangeData } from 'src/server/server.type';
 import { ServerService } from 'src/server/server.service';
 import { ServerGuardSocket } from 'src/server/server.gateway';
 import { Map } from 'src/map/map.schema';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class PlayerService {
   constructor(
     @InjectModel('Player') private readonly playerModel: Model<Player>,
+    private readonly userService: UserService,
   ) {}
 
   async create(userId: string, lobbyId: string) {
@@ -117,7 +119,7 @@ export class PlayerService {
       Math.floor(Math.random() * 6) +
       1;
 
-    let diceBonuses = player.bonuses.filter(
+    const diceBonuses = player.bonuses.filter(
       (bonus) =>
         bonus === playerVaultType.diceDouble ||
         bonus === playerVaultType.diceDividedBy2 ||

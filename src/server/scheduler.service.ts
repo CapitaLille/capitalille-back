@@ -11,6 +11,8 @@ import { moneyTransactionType } from 'src/player/player.schema';
 import { PlayerService } from 'src/player/player.service';
 import { ServerService } from 'src/server/server.service';
 import { Doc, Bank, GameEvent } from 'src/server/server.type';
+import { AchievementType } from 'src/user/user.schema';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class SchedulerService {
@@ -18,6 +20,7 @@ export class SchedulerService {
     private schedulerRegistry: SchedulerRegistry,
     private readonly lobbyService: LobbyService,
     private readonly serverService: ServerService,
+    private readonly userService: UserService,
     private readonly playerService: PlayerService,
     private readonly houseService: HouseService,
     private readonly mapService: MapService,
@@ -25,7 +28,7 @@ export class SchedulerService {
 
   async scheduleLobbies(socket: Server) {
     const lobbies = await this.lobbyService.findAllRunning();
-    let promises = [];
+    const promises = [];
     lobbies.forEach(async (lobby) => {
       promises.push(this.scheduleNextTurnForLobby(lobby.id, socket));
     });
@@ -104,6 +107,12 @@ export class SchedulerService {
           // Nobody make an auction. Selling to the bank.
           auction = house.price[house.level];
         }
+        if (house.nextOwner !== '') {
+          this.userService.statisticsUpdate(
+            house.nextOwner,
+            AchievementType.auctionWinner,
+          );
+        }
         await this.serverService.playerMoneyTransaction(
           auction,
           house.owner !== '' ? house.owner : Bank.id,
@@ -152,6 +161,10 @@ export class SchedulerService {
       const houses = await this.houseService.findAllFromLobby(lobby.id);
       const leaderboard = [];
       for (const player of players) {
+        this.userService.statisticsUpdate(
+          player.user,
+          AchievementType.playGame,
+        );
         let housesValue = 0;
         for (const houseIndex of player.houses) {
           const house = houses.find((e) => {
