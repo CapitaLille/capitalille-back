@@ -40,6 +40,7 @@ import {
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler.service';
 import { CaseEventType, CaseType } from 'src/map/map.schema';
+import { UserService } from 'src/user/user.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -60,6 +61,7 @@ export class ServerGateway
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
     private readonly mapService: MapService,
+    private readonly userService: UserService,
     private readonly schedulerService: SchedulerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
@@ -105,10 +107,12 @@ export class ServerGateway
           async (lobby, player, map) => {
             const players = await this.playerService.findAllFromLobby(lobby.id);
             const houses = await this.houseService.findAllFromLobby(lobby.id);
+            const users = await this.userService.findSomeFromLobby(lobby.id);
             socket.emit(GameEvent.SUBSCRIBE, {
               lobby,
               houses,
               players,
+              users,
               map,
               player,
             });
