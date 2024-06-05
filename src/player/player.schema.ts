@@ -30,6 +30,7 @@ export class Player {
 }
 
 export enum PlayerEvent {
+  JOIN_LOBBY = 'joinLobby',
   PLAY_TURN = 'playTurn',
   SUBSCRIBE = 'subscribe',
   BUY_AUCTION = 'auction',
