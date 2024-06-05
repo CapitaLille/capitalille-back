@@ -13,13 +13,8 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
-import mongoose from 'mongoose';
-import { ObjectId } from 'mongodb';
-import { idDto } from 'src/app.dto';
-import { ApiBadRequestResponse } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClaimAchievementDto } from './dto/claim-achievement.dto';
 @Controller('user')
@@ -48,6 +43,12 @@ export class UserController {
         data.search,
       );
     }
+  }
+
+  @Get(':id')
+  @UseGuards(AuthGuard)
+  async findOneById(@Param('id') id: string) {
+    return await this.userService.findOne(id);
   }
 
   @Patch('')
