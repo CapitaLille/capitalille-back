@@ -237,8 +237,18 @@ export class LobbyService {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const users = await this.userService.findSomeFromLobby(lobbyId, 3);
     const map = await this.mapService.findOne(lobby.map);
-
     return { lobby, users, map };
+  }
+
+  async presents(lobbyIds: string[]) {
+    const lobbies = await this.lobbyModel.find({ _id: { $in: lobbyIds } });
+    const extendedLobbies = [];
+    for (const lobby of lobbies) {
+      const users = await this.userService.findSomeFromLobby(lobby.id, 3);
+      const map = await this.mapService.findOne(lobby.map);
+      extendedLobbies.push({ lobby, users, map });
+    }
+    return extendedLobbies;
   }
 
   async findPublic(date: Date, page: number, limit: number) {
