@@ -15,8 +15,10 @@ import { nanoid } from 'nanoid';
 import { HouseService } from 'src/house/house.service';
 import { MapService } from 'src/map/map.service';
 import { CreateLobbyHousesDto } from 'src/house/dto/create-lobby-houses.dto';
-import { Doc } from 'src/server/server.type';
 import { AchievementType } from 'src/user/user.schema';
+import { Server } from 'socket.io';
+import { ServerGuardSocket } from 'src/server/server.gateway';
+import { Doc, GameEvent } from 'src/server/server.type';
 
 @Injectable()
 export class LobbyService {
@@ -26,7 +28,6 @@ export class LobbyService {
     private readonly userService: UserService,
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
-
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -104,6 +105,50 @@ export class LobbyService {
     return HttpStatus.CREATED;
   }
 
+  async joinLobby(
+    lobbyId: string,
+    userId: string,
+    socket: Server | ServerGuardSocket,
+    code: string,
+  ) {
+    const lobby = await this.lobbyModel.findById(lobbyId);
+    const user = await this.userService.findOne(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!lobby) {
+      throw new NotFoundException('Lobby not found');
+    }
+    if (lobby.users.length >= lobby.maxPlayers) {
+      throw new ForbiddenException('Lobby is full');
+    }
+    if (user.lobbys.includes(lobbyId)) {
+      throw new ForbiddenException('User already in lobby');
+    }
+    if (lobby.private && lobby.code !== code) {
+      throw new ForbiddenException('Invalid code');
+    }
+    const session = await this.connection.startSession();
+    try {
+      session.startTransaction();
+      user.lobbys.push(lobbyId);
+      await this.playerService.create(userId, lobbyId);
+      await this.userService.findByIdAndUpdate(userId, {
+        $push: { lobbys: lobbyId },
+      });
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+
+    socket.to(lobbyId).emit(GameEvent.PLAYER_JOIN, { user: userId });
+    return HttpStatus.ACCEPTED;
+  }
+
   async addPlayer(lobbyId: string, userId: string) {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userService.findOne(userId);
@@ -126,40 +171,6 @@ export class LobbyService {
       user.lobbys.push(lobbyId);
       await this.playerService.create(userId, lobbyId);
       await this.userService.update(userId, user);
-
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
-
-    return HttpStatus.ACCEPTED;
-  }
-
-  async removePlayer(lobbyId: string, userId: string) {
-    const lobby = await this.lobbyModel.findById(lobbyId);
-    const user = await this.userService.findOne(userId);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (!lobby) {
-      throw new NotFoundException('Lobby not found');
-    }
-    if (!user.lobbys.includes(lobbyId)) {
-      throw new ForbiddenException('User not in lobby');
-    }
-    if (userId === lobby.owner) {
-      throw new ForbiddenException('Owner cannot leave lobby');
-    }
-    const session = await this.connection.startSession();
-    try {
-      session.startTransaction();
-      await this.playerService.deleteOneFromLobby(userId, lobbyId);
-      await this.houseService.freeHouseFromOwner(userId, lobbyId);
-      // Remove conversation of the user.
 
       await session.commitTransaction();
     } catch (error) {
@@ -255,12 +266,7 @@ export class LobbyService {
     return await this.lobbyModel.findByIdAndUpdate(lobbyId, update);
   }
 
-  async findPrivate(code: string): Promise<
-    mongoose.Document<unknown, {}, Lobby> &
-      Lobby & {
-        _id: mongoose.Types.ObjectId;
-      }
-  > {
+  async findPrivate(code: string): Promise<Doc<Lobby> | undefined> {
     const lobby = await this.lobbyModel.findOne({ code: code });
     if (!lobby) {
       return undefined;

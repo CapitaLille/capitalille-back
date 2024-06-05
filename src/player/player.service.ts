@@ -7,7 +7,6 @@ import {
   NotImplementedException,
   forwardRef,
 } from '@nestjs/common';
-import { CreatePlayerDto } from './dto/create-player.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, UpdateQuery } from 'mongoose';
 import {
@@ -31,15 +30,9 @@ export class PlayerService {
   ) {}
 
   async create(userId: string, lobbyId: string) {
-    const player = new CreatePlayerDto();
+    let player;
     player.user = userId;
     player.lobby = lobbyId;
-    player.money = lobbyConstants.starting.money;
-    player.rating = lobbyConstants.starting.rating;
-    player.transactions = [];
-    player.turnPlayed = false;
-    player.actionPlayed = false;
-    player.houses = [];
     return await this.playerModel.create(player);
   }
 

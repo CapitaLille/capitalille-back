@@ -42,6 +42,7 @@ import { SchedulerService } from './scheduler.service';
 import { CaseEventType, CaseType } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
 import { Achievement, AchievementType } from 'src/user/user.schema';
+import { LobbyService } from 'src/lobby/lobby.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -61,6 +62,7 @@ export class ServerGateway
     private readonly houseService: HouseService,
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
+    private readonly lobbyService: LobbyService,
     private readonly mapService: MapService,
     private readonly userService: UserService,
     private readonly schedulerService: SchedulerService,
@@ -122,6 +124,25 @@ export class ServerGateway
       } catch (error) {
         socket.emit(GameEvent.ERROR, { message: error.message });
       }
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.JOIN_LOBBY)
+  async joinLobby(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; code: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.lobbyService.joinLobby(
+        data.lobbyId,
+        userId,
+        socket,
+        data.code,
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
     }
   }
 

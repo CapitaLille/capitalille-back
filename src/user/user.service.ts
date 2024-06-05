@@ -37,17 +37,37 @@ export class UserService {
     return await this.userModel.findById(userId);
   }
 
+  async searchUsers(search: string, page: number = -1) {
+    if (page !== -1) {
+      return await this.userModel
+        .find({ nickname: { $regex: search } })
+        .limit(10);
+    }
+    return await this.userModel
+      .find({ nickname: { $regex: search } })
+      .limit(10)
+      .skip(page * 10);
+  }
+
+  async searchFriends(userId: string, search: string, page: number = -1) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (page !== -1) {
+      return await this.userModel
+        .find({ nickname: { $regex: search }, _id: { $in: user.friends } })
+        .limit(10);
+    }
+    return await this.userModel
+      .find({ nickname: { $regex: search }, _id: { $in: user.friends } })
+      .limit(10)
+      .skip(page * 10);
+  }
+
   async findOneByEmail(email: string) {
     console.log('email', email);
     return await this.userModel.findOne({ email });
-  }
-
-  async findAll() {
-    const users = await this.userModel.find();
-    if (!users) {
-      throw new NotFoundException('Users not found');
-    }
-    return users;
   }
 
   async requestFriend(id: string, friendId: string) {
@@ -228,6 +248,14 @@ export class UserService {
     return HttpStatus.OK;
   }
 
+  async findByIdAndUpdate(userId: string, update: mongoose.UpdateQuery<User>) {
+    if (!(await this.userModel.findById(userId))) {
+      throw new NotFoundException('User not found');
+    }
+    await this.userModel.findByIdAndUpdate(userId, update);
+    return HttpStatus.OK;
+  }
+
   async statisticsUpdate(userId: string, achievement: Achievement) {
     switch (achievement) {
       case AchievementType.auctionWinner:
@@ -319,10 +347,10 @@ export class UserService {
         if (newUncompletedAchievement.level.length > 0) {
           achievementsUncompleted.push(newUncompletedAchievement);
         }
+        achievementsCompleted.push(findCompleted);
       } else {
         achievementsUncompleted.push(achievement);
       }
-      achievementsCompleted.push(findCompleted);
     }
     return { achievementsCompleted, achievementsUncompleted };
   }
@@ -528,7 +556,35 @@ export class UserService {
     if (!(await this.userModel.findById(userId))) {
       throw new NotFoundException('User not found');
     }
-    await this.userModel.findByIdAndDelete(userId);
+    await this.userModel.updateMany(
+      { friends: userId },
+      { $pull: { friends: userId } },
+    );
+    await this.userModel.findByIdAndUpdate(userId, {
+      friends: [],
+      lobbies: [],
+      notifications: [],
+      email: 'deleted',
+      pp: '',
+      nickname: 'deleted',
+      trophies: 0,
+      achievements: [],
+      statistics: {
+        auctionsBought: 0,
+        auctionsWon: 0,
+        complaints: 0,
+        dicesLaunched: 0,
+        gamesCreated: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        monumentsRestored: 0,
+        moneyReceived: 0,
+        casinos: 0,
+        loans: 0,
+        rentFraud: 0,
+      },
+      credit: 0,
+    });
     return HttpStatus.OK;
   }
 
