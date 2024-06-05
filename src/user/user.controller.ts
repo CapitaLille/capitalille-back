@@ -26,7 +26,14 @@ import { ClaimAchievementDto } from './dto/claim-achievement.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get('')
+  @Get()
+  @UseGuards(AuthGuard)
+  async find(@Request() req) {
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.userService.findOne(req.user.data.sub);
+  }
+
+  @Get('search')
   @UseGuards(AuthGuard)
   async findOne(
     @Request() req,
