@@ -86,12 +86,12 @@ export class ServerGateway
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
     console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
-    const player = await this.playerService.findOne(
+    let player = await this.playerService.findOne(
       socket.handshake.user.sub,
       data.lobbyId,
     );
     if (!player) {
-      this.lobbyService.joinLobby(
+      player = await this.lobbyService.joinLobby(
         data.lobbyId,
         socket.handshake.user.sub,
         socket,

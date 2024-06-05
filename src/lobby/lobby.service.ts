@@ -19,6 +19,7 @@ import { AchievementType } from 'src/user/user.schema';
 import { Server } from 'socket.io';
 import { ServerGuardSocket } from 'src/server/server.gateway';
 import { Doc, GameEvent } from 'src/server/server.type';
+import { Player } from 'src/player/player.schema';
 
 @Injectable()
 export class LobbyService {
@@ -114,7 +115,7 @@ export class LobbyService {
     userId: string,
     socket: Server | ServerGuardSocket,
     code: string = '',
-  ) {
+  ): Promise<Doc<Player>> {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userService.findOne(userId);
 
@@ -145,13 +146,13 @@ export class LobbyService {
         .to(lobbyId)
         .emit(GameEvent.NEW_USER, { user: user, player: player });
       await session.commitTransaction();
+      return player;
     } catch (error) {
       await session.abortTransaction();
       throw error;
     } finally {
       session.endSession();
     }
-    return HttpStatus.ACCEPTED;
   }
 
   async addPlayer(lobbyId: string, userId: string) {
@@ -243,15 +244,18 @@ export class LobbyService {
   }
 
   async presents(userId: string) {
+    console.log('presents');
     const user = await this.userService.findOne(userId);
     const ids = user.lobbies;
     const lobbies = await this.lobbyModel.find({ _id: { $in: ids } });
+    console.log('lobbies', lobbies);
     const extendedLobbies = [];
     for (const lobby of lobbies) {
       const userIds = lobby.users;
       const users = await this.userService.findByIds(userIds, 3);
       const map = await this.mapService.findOne(lobby.map);
-      extendedLobbies.push({ lobby, users, map });
+      const player = await this.playerService.findOne(userId, lobby.id);
+      extendedLobbies.push({ lobby, users, map, player });
     }
     return extendedLobbies;
   }
