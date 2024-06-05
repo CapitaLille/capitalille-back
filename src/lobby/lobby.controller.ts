@@ -34,6 +34,12 @@ export class LobbyController {
     return await this.lobbyService.findAllFromUser(req.user.data.sub, page);
   }
 
+  @Get('present/:lobbyId')
+  @UseGuards(AuthGuard)
+  async present(@Param('lobbyId') lobbyId: string, @Request() req) {
+    return await this.lobbyService.present(lobbyId);
+  }
+
   @Get(':lobbyId')
   async findOne(@Param('lobbyId') lobbyId: string) {
     return await this.lobbyService.findOne(lobbyId);

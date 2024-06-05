@@ -233,6 +233,14 @@ export class LobbyService {
     return await this.lobbyModel.findById(lobbyId);
   }
 
+  async present(lobbyId: string) {
+    const lobby = await this.lobbyModel.findById(lobbyId);
+    const users = await this.userService.findSomeFromLobby(lobbyId, 3);
+    const map = await this.mapService.findOne(lobby.map);
+
+    return { lobby, users, map };
+  }
+
   async findPublic(date: Date, page: number, limit: number) {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
