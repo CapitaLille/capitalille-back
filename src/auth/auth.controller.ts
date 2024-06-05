@@ -44,7 +44,6 @@ export class AuthController {
     @Body('token') token: string,
     @Body('newPassword') newPassword: string,
   ) {
-    console.log('try reset password token : ', token);
     try {
       const payload = await this.authService.validatePasswordResetToken(token);
       const email = payload.email;

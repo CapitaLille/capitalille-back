@@ -78,7 +78,6 @@ export class ServerService {
     } else {
       this.socketIds[index].socketId = socketId;
     }
-    console.log(this.socketIds);
   }
 
   async removeSocketId(
@@ -395,7 +394,6 @@ export class ServerService {
           newToPlayer.user,
           AchievementType.payMe,
         );
-        console.log(newToPlayer, 'newToPlayer', 'amount', amount, 'type', type);
         if (data.socketEmitTargetPlayer) {
           const targetSocketId = await this.getSocketId(newToPlayer.id);
           socket

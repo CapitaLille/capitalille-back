@@ -33,16 +33,20 @@ export class LobbyService {
 
   async create(createLobbyDto: CreateLobbyDto, ownerId: string) {
     const session = await this.connection.startSession();
+    console.log('createLobbyDto', createLobbyDto);
     try {
       session.startTransaction();
-
       // Créez le lobby
       const newLobbyId = new mongoose.Types.ObjectId();
       const lobbyCode = nanoid(6);
-      const newLobby = new this.lobbyModel({
+      let users = createLobbyDto.users;
+      if (!users.includes(ownerId)) {
+        users.push(ownerId);
+      }
+      let newLobby = new this.lobbyModel({
         _id: newLobbyId,
         owner: ownerId,
-        users: createLobbyDto.users,
+        users: users,
         map: createLobbyDto.map,
         turnSchedule: createLobbyDto.turnSchedule,
         turnCount: 0,
@@ -60,17 +64,16 @@ export class LobbyService {
       }
 
       const operations = [];
-      if (createLobbyDto.users.find((user) => user === ownerId) === undefined) {
-        createLobbyDto.users.push(ownerId);
-      }
-      // Créez les joueurs
+      await this.userService.findByIdAndUpdate(ownerId, {
+        $push: { lobbies: newLobbyId },
+      });
+
+      // Créez le joueur du propriétaire.
+      operations.push(
+        this.playerService.create(ownerId, newLobbyId.toString()),
+      );
       for (let i = 0; i < createLobbyDto.users.length; i++) {
-        operations.push(
-          this.playerService.create(
-            createLobbyDto.users[i],
-            newLobbyId.toString(),
-          ),
-        );
+        // Envoyez une notification à chaque utilisateur.
         operations.push(
           this.userService.pushNotification({
             from: createLobbyDto.users[i],
@@ -87,7 +90,8 @@ export class LobbyService {
         map: map,
       };
       await Promise.all(operations);
-      await newLobby.save();
+      const newL = await newLobby.save();
+      console.log('newL', newL);
       await this.userService.statisticsUpdate(
         ownerId,
         AchievementType.gameCreator,
@@ -109,7 +113,7 @@ export class LobbyService {
     lobbyId: string,
     userId: string,
     socket: Server | ServerGuardSocket,
-    code: string,
+    code: string = '',
   ) {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userService.findOne(userId);
@@ -123,20 +127,23 @@ export class LobbyService {
     if (lobby.users.length >= lobby.maxPlayers) {
       throw new ForbiddenException('Lobby is full');
     }
-    if (user.lobbys.includes(lobbyId)) {
+    if (user.lobbies.includes(lobbyId)) {
       throw new ForbiddenException('User already in lobby');
     }
-    if (lobby.private && lobby.code !== code) {
+    if (lobby.private && lobby.code !== code && !lobby.users.includes(userId)) {
       throw new ForbiddenException('Invalid code');
     }
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
-      user.lobbys.push(lobbyId);
-      await this.playerService.create(userId, lobbyId);
+      user.lobbies.push(lobbyId);
+      const player = await this.playerService.create(userId, lobbyId);
       await this.userService.findByIdAndUpdate(userId, {
         $push: { lobbys: lobbyId },
       });
+      socket
+        .to(lobbyId)
+        .emit(GameEvent.NEW_USER, { user: user, player: player });
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -144,8 +151,6 @@ export class LobbyService {
     } finally {
       session.endSession();
     }
-
-    socket.to(lobbyId).emit(GameEvent.PLAYER_JOIN, { user: userId });
     return HttpStatus.ACCEPTED;
   }
 
@@ -162,13 +167,13 @@ export class LobbyService {
     if (lobby.users.length >= lobby.maxPlayers) {
       throw new ForbiddenException('Lobby is full');
     }
-    if (user.lobbys.includes(lobbyId)) {
+    if (user.lobbies.includes(lobbyId)) {
       throw new ForbiddenException('User already in lobby');
     }
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
-      user.lobbys.push(lobbyId);
+      user.lobbies.push(lobbyId);
       await this.playerService.create(userId, lobbyId);
       await this.userService.update(userId, user);
 

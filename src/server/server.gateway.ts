@@ -83,47 +83,46 @@ export class ServerGateway
   @SubscribeMessage(PlayerEvent.SUBSCRIBE)
   async suscribe(
     @ConnectedSocket() socket: ServerGuardSocket,
-    @MessageBody() data: { lobbyId: string },
+    @MessageBody() data: { lobbyId: string; code: string },
   ) {
     console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
-    this.serverService.setSocketId(socket.handshake.user.sub, socket.id);
     const player = await this.playerService.findOne(
       socket.handshake.user.sub,
       data.lobbyId,
     );
     if (!player) {
-      throw new NotFoundException('Player not found');
-    } else {
-      console.log(
-        'player join the lobby :',
+      this.lobbyService.joinLobby(
         data.lobbyId,
-        ' playerId :',
         socket.handshake.user.sub,
+        socket,
+        data.code,
       );
-      socket.join(data.lobbyId);
-      const userId = socket.handshake.user.sub;
-      try {
-        await this.serverService.gameSession(
-          data.lobbyId,
-          userId,
-          socket,
-          async (lobby, player, map) => {
-            const players = await this.playerService.findAllFromLobby(lobby.id);
-            const houses = await this.houseService.findAllFromLobby(lobby.id);
-            const users = await this.userService.findSomeFromLobby(lobby.id);
-            socket.emit(GameEvent.SUBSCRIBE, {
-              lobby,
-              houses,
-              players,
-              users,
-              map,
-              player,
-            });
-          },
-        );
-      } catch (error) {
-        socket.emit(GameEvent.ERROR, { message: error.message });
-      }
+    }
+    this.serverService.setSocketId(player.id, socket.id);
+    socket.join(data.lobbyId);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const players = await this.playerService.findAllFromLobby(lobby.id);
+          const houses = await this.houseService.findAllFromLobby(lobby.id);
+          const users = await this.userService.findByIds(lobby.users);
+          console.log('users from lobby ' + lobby.id, users);
+          socket.emit(GameEvent.SUBSCRIBE, {
+            lobby,
+            houses,
+            players,
+            users,
+            map,
+            player,
+          });
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
     }
   }
 

@@ -12,7 +12,6 @@ export class FilesAzureService {
 
   private async getBlobServiceInstance() {
     const connectionString = this.configService.get('CONNECTION_STRING');
-    console.log(connectionString);
     const blobClientService =
       await BlobServiceClient.fromConnectionString(connectionString);
     return blobClientService;
@@ -46,7 +45,6 @@ export class FilesAzureService {
         .jpeg({ quality })
         .toBuffer({ resolveWithObject: true })
         .then((data) => {
-          console.log(data);
           return data;
         });
 

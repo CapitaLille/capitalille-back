@@ -29,10 +29,11 @@ export class PlayerService {
     private readonly userService: UserService,
   ) {}
 
-  async create(userId: string, lobbyId: string) {
-    let player;
-    player.user = userId;
-    player.lobby = lobbyId;
+  async create(userId: string, lobbyId: string): Promise<Doc<Player>> {
+    let player = {
+      user: userId,
+      lobby: lobbyId,
+    };
     return await this.playerModel.create(player);
   }
 
