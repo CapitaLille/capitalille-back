@@ -123,7 +123,6 @@ export class AuthService {
         secret: jwtConstants.secret,
       })
       .catch((err) => {
-        console.log(err);
         throw new UnauthorizedException(
           "Le token n'est pas valide, ou a expiré.",
         );

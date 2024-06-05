@@ -241,7 +241,7 @@ export class User {
   nickname: string;
 
   @Prop({ required: true, default: [] })
-  lobbys: string[];
+  lobbies: string[];
 
   @Prop({ required: true, default: [] })
   friends: string[];

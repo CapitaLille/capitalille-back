@@ -27,7 +27,6 @@ export class MapController {
 
   @Post('fake')
   async fake() {
-    console.log('create fake map');
     return await this.mapService.createFake();
   }
 

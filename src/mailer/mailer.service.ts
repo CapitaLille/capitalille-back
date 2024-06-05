@@ -89,12 +89,8 @@ export class MailerService {
 
     try {
       const response = await client.beginSend(emailMessage);
-      console.log(
-        "E-mail envoyé avec l'identifiant de message :",
-        response.toString(),
-      );
     } catch (error) {
-      console.log("Erreur lors de l'envoi de l'e-mail :", error);
+      throw error;
     }
   }
 }

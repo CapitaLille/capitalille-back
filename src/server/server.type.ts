@@ -26,12 +26,11 @@ export class GameResponse<T> {
 }
 
 export enum GameEvent {
-  PLAYER_JOIN = 'playerJoin',
-  PLAYER_KICK = 'playerKick',
   ERROR = 'error',
   SUBSCRIBE = 'subscribe',
   PLAY_TURN = 'playTurn', // Return player's diceBonuses, path, salary and last case gameEvent.
   PLAYER_UPDATE = 'playerUpdate',
+  NEW_USER = 'userJoin',
   MONEY_CHANGE = 'moneyChange',
   RATING_CHANGE = 'ratingChange',
   AUCTION_SET = 'auctionSet',
