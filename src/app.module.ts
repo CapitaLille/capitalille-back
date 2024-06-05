@@ -17,11 +17,6 @@ import { MailerService } from './mailer/mailer.service';
 
 @Module({
   imports: [
-    // ConfigModule.forRoot({
-    //   envFilePath: ['.env.dev', '.env.prod', '.env'],
-    //   isGlobal: true,
-    //   cache: true,
-    // }),
     ConfigModule.forRoot({
       isGlobal: true, // Make ConfigModule available globally
       envFilePath: '.env', // Load from .env file

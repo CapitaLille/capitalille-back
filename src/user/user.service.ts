@@ -296,6 +296,37 @@ export class UserService {
     return HttpStatus.OK;
   }
 
+  async getAchievements(userId: string) {
+    const user = await this.userModel.findById(userId);
+    let allAchievements = Achievement.achievements;
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    let achievementsCompleted = [];
+    let achievementsUncompleted = [];
+
+    for (const achievement of allAchievements) {
+      const findCompleted = user.achievements.find(
+        (e) => e.name === achievement.name,
+      );
+      if (findCompleted) {
+        const newUncompletedAchievement = {
+          name: findCompleted.name,
+          level: findCompleted.level.filter(
+            (e) => !findCompleted.level.includes(e),
+          ),
+        };
+        if (newUncompletedAchievement.level.length > 0) {
+          achievementsUncompleted.push(newUncompletedAchievement);
+        }
+      } else {
+        achievementsUncompleted.push(achievement);
+      }
+      achievementsCompleted.push(findCompleted);
+    }
+    return { achievementsCompleted, achievementsUncompleted };
+  }
+
   async claimAchievement(
     userId: string,
     achievement: AchievementType,

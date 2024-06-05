@@ -58,6 +58,12 @@ export class UserController {
     );
   }
 
+  @Get('achievements')
+  async getAchievements(@Request() req) {
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.userService.getAchievements(req.user.data.sub);
+  }
+
   @Patch('pp')
   @UseInterceptors(FileInterceptor('pp'))
   async updatePp(@Request() req, @UploadedFile() file: Express.Multer.File) {
