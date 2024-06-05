@@ -36,14 +36,14 @@ export class LobbyController {
 
   @Get('present/:lobbyId')
   @UseGuards(AuthGuard)
-  async present(@Param('lobbyId') lobbyId: string) {
+  async present(@Param('lobbyId') lobbyId: string, @Request() req) {
     return await this.lobbyService.present(lobbyId);
   }
 
   @Get('presents')
   @UseGuards(AuthGuard)
-  async presents(@Body('lobbyId') lobbyId: string[]) {
-    return await this.lobbyService.presents(lobbyId);
+  async presents(@Request() req) {
+    return await this.lobbyService.presents(req.user.data.sub);
   }
 
   @Get(':lobbyId')
