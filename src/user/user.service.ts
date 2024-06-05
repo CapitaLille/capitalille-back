@@ -201,22 +201,9 @@ export class UserService {
     return HttpStatus.OK;
   }
 
-  async findSomeFromLobby(lobbyId: string, limit: number = -1) {
-    console.log('lobbyId', lobbyId, limit);
-    const users2 = await this.userModel.find({
-      lobbies: { $in: ['6660736b64dbe95fb0f1141a'] },
-    });
-    const users = await this.userModel.find({ lobbies: lobbyId });
-    console.log(users, users2);
-    if (limit === -1) {
-      return await this.userModel.find({ lobbies: lobbyId }).exec();
-    }
-    return await this.userModel.find({ lobbies: lobbyId }).limit(limit).exec();
-  }
-
-  async findByIds(ids: string[]) {
+  async findByIds(ids: string[], limit: number = 10) {
     console.log('ids', ids);
-    return await this.userModel.find({ _id: { $in: ids } });
+    return await this.userModel.find({ _id: { $in: ids } }).limit(limit);
   }
 
   async answerNotification(

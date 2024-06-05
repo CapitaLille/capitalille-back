@@ -224,7 +224,8 @@ export class LobbyService {
       .exec();
     const extendedLobbies = [];
     for (const lobby of lobbies) {
-      const users = await this.userService.findSomeFromLobby(lobby.id, 3);
+      const userIds = lobby.users;
+      const users = await this.userService.findByIds(userIds, 3);
       extendedLobbies.push({ lobby, users });
     }
   }
@@ -235,16 +236,20 @@ export class LobbyService {
 
   async present(lobbyId: string) {
     const lobby = await this.lobbyModel.findById(lobbyId);
-    const users = await this.userService.findSomeFromLobby(lobbyId, 3);
+    const ids = lobby.users;
+    const users = await this.userService.findByIds(ids, 3);
     const map = await this.mapService.findOne(lobby.map);
     return { lobby, users, map };
   }
 
-  async presents(lobbyIds: string[]) {
-    const lobbies = await this.lobbyModel.find({ _id: { $in: lobbyIds } });
+  async presents(userId: string) {
+    const user = await this.userService.findOne(userId);
+    const ids = user.lobbies;
+    const lobbies = await this.lobbyModel.find({ _id: { $in: ids } });
     const extendedLobbies = [];
     for (const lobby of lobbies) {
-      const users = await this.userService.findSomeFromLobby(lobby.id, 3);
+      const userIds = lobby.users;
+      const users = await this.userService.findByIds(userIds, 3);
       const map = await this.mapService.findOne(lobby.map);
       extendedLobbies.push({ lobby, users, map });
     }
