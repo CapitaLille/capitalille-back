@@ -5,7 +5,7 @@ import mongoose, { HydratedDocument } from 'mongoose';
 export type UserDocument = HydratedDocument<User>;
 
 export enum AchievementType {
-  // thiefLeague = 'thiefLeague',
+  thiefLeague = 'thiefLeague',
   mafiaLeague = 'mafiaLeague',
   annuitantLeague = 'annuitantLeague',
   studentLeague = 'studentLeague',
@@ -51,10 +51,10 @@ export class AchievementClass {
 }
 
 export class Achievement {
-  // static thiefLeague = new AchievementClass({
-  //   type: AchievementType.thiefLeague,
-  //   level: [AchievementLevel.zero],
-  // });
+  static thiefLeague = new AchievementClass({
+    name: AchievementType.thiefLeague,
+    level: [AchievementLevel.zero],
+  });
   static mafiaLeague = new AchievementClass({
     name: AchievementType.mafiaLeague,
     level: [AchievementLevel.zero],
@@ -206,6 +206,27 @@ export class Achievement {
       AchievementLevel.three,
     ],
   });
+  static achievements = [
+    Achievement.thiefLeague,
+    Achievement.mafiaLeague,
+    Achievement.annuitantLeague,
+    Achievement.studentLeague,
+    Achievement.payMe,
+    Achievement.monumentsRestorer,
+    Achievement.auctionBuyer,
+    Achievement.auctionWinner,
+    Achievement.copsComplainer,
+    Achievement.friend,
+    Achievement.gameCreator,
+    Achievement.playGame,
+    Achievement.winGame,
+    Achievement.diceLauncher,
+    Achievement.liveOnLoan,
+    Achievement.gambler,
+    Achievement.frauder,
+    Achievement.student,
+    Achievement.teleport,
+  ];
 }
 
 @Schema()
