@@ -207,11 +207,15 @@ export class ServerService {
       }
     }
     player.casePosition = map.cases.indexOf(path[path.length - 1]);
-    const newPlayer = await this.playerService.findByIdAndUpdate(player.id, {
-      casePosition: player.casePosition,
-      turnPlayed: true,
-      $inc: { money: totalEarnThisTurn },
-    });
+    const newPlayer = await this.playerService.findByIdAndUpdate(
+      player.id,
+      {
+        casePosition: player.casePosition,
+        turnPlayed: true,
+        $inc: { money: totalEarnThisTurn },
+      },
+      this.serverGateway.getServer(),
+    );
     return { path, salary: playerSalary, newPlayer };
   }
 
@@ -251,11 +255,15 @@ export class ServerService {
                 forceTransaction: true,
               },
             );
-            await this.playerService.findByIdAndUpdate(player.id, {
-              $pull: { bonuses: playerVaultType.loan },
-              turnPlayed: true,
-              actionPlayed: true,
-            });
+            await this.playerService.findByIdAndUpdate(
+              player.id,
+              {
+                $pull: { bonuses: playerVaultType.loan },
+                turnPlayed: true,
+                actionPlayed: true,
+              },
+              this.serverGateway.getServer(),
+            );
             return GameEvent.BANK_LOAN_REFUND;
           }
           return GameEvent.BANK_LOAN_REQUEST;
@@ -283,10 +291,14 @@ export class ServerService {
                 },
               );
             }
-            await this.playerService.findByIdAndUpdate(player.id, {
-              turnPlayed: true,
-              actionPlayed: true,
-            });
+            await this.playerService.findByIdAndUpdate(
+              player.id,
+              {
+                turnPlayed: true,
+                actionPlayed: true,
+              },
+              this.serverGateway.getServer(),
+            );
             return GameEvent.HOUSE_RENT_PAY;
           }
           return GameEvent.HOUSE_RENT_REQUEST;
@@ -310,10 +322,14 @@ export class ServerService {
         case CaseType.SCHOOL:
           return GameEvent.SCHOOL_REQUEST;
         default:
-          await this.playerService.findByIdAndUpdate(player.id, {
-            turnPlayed: true,
-            actionPlayed: true,
-          });
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              turnPlayed: true,
+              actionPlayed: true,
+            },
+            this.serverGateway.getServer(),
+          );
           return GameEvent.UNHANDLED_EVENT;
       }
     } catch (error) {
@@ -388,9 +404,13 @@ export class ServerService {
       }
 
       if (typeof fromPlayer === typeof '' && fromPlayer !== Bank.id) {
-        await this.playerService.findByIdAndUpdate(newFromPlayer.id, {
-          $inc: { money: -amount },
-        });
+        await this.playerService.findByIdAndUpdate(
+          newFromPlayer.id,
+          {
+            $inc: { money: -amount },
+          },
+          this.serverGateway.getServer(),
+        );
         if (data.socketEmitSourcePlayer) {
           const targetSocketId = await this.getSocketId(newFromPlayer.id);
           await socket
@@ -407,9 +427,13 @@ export class ServerService {
         }
       }
       if (typeof toPlayer === typeof '' && toPlayer !== Bank.id) {
-        await this.playerService.findByIdAndUpdate(newToPlayer.id, {
-          $inc: { money: amount },
-        });
+        await this.playerService.findByIdAndUpdate(
+          newToPlayer.id,
+          {
+            $inc: { money: amount },
+          },
+          this.serverGateway.getServer(),
+        );
         await this.userService.statisticsUpdate(
           newToPlayer.user,
           AchievementType.payMe,
@@ -435,6 +459,7 @@ export class ServerService {
           amount, // from player deduction
           newToPlayer?.id ? newToPlayer.id : Bank.id,
           type,
+          this.serverGateway.getServer(),
         );
       }
       return HttpStatus.OK;
@@ -470,9 +495,13 @@ export class ServerService {
           ratingTransactionType.MONUMENTS_RATING,
         ),
       );
-    return await this.playerService.findByIdAndUpdate(player.id, {
-      rating: newRating,
-    });
+    return await this.playerService.findByIdAndUpdate(
+      player.id,
+      {
+        rating: newRating,
+      },
+      this.serverGateway.getServer(),
+    );
   }
 
   /**
@@ -490,9 +519,13 @@ export class ServerService {
     const player = await this.playerService.findOneById(playerId);
     switch (caseEventType) {
       case CaseEventType.DICE_DOUBLE:
-        await this.playerService.findByIdAndUpdate(player.id, {
-          $push: { bonuses: playerVaultType.dicePlus2 },
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            $push: { bonuses: playerVaultType.dicePlus2 },
+          },
+          this.serverGateway.getServer(),
+        );
         break;
       case CaseEventType.ELECTRICITY_FAILURE:
         await this.houseService.setHouseFailure(
@@ -500,10 +533,14 @@ export class ServerService {
           'electricity',
           this.serverGateway.getServer(),
         );
-        await this.playerService.findByIdAndUpdate(player.id, {
-          turnPlayed: true,
-          actionPlayed: true,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            turnPlayed: true,
+            actionPlayed: true,
+          },
+          this.serverGateway.getServer(),
+        );
         break;
       case CaseEventType.FIRE_FAILURE:
         await this.houseService.setHouseFailure(
@@ -511,10 +548,14 @@ export class ServerService {
           'fire',
           this.serverGateway.getServer(),
         );
-        await this.playerService.findByIdAndUpdate(player.id, {
-          turnPlayed: true,
-          actionPlayed: true,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            turnPlayed: true,
+            actionPlayed: true,
+          },
+          this.serverGateway.getServer(),
+        );
         break;
       case CaseEventType.WATER_FAILURE:
         await this.houseService.setHouseFailure(
@@ -522,23 +563,35 @@ export class ServerService {
           'water',
           this.serverGateway.getServer(),
         );
-        await this.playerService.findByIdAndUpdate(player.id, {
-          turnPlayed: true,
-          actionPlayed: true,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            turnPlayed: true,
+            actionPlayed: true,
+          },
+          this.serverGateway.getServer(),
+        );
         break;
       case CaseEventType.RENT_DISCOUNT:
-        await this.playerService.findByIdAndUpdate(player.id, {
-          $push: { bonuses: playerVaultType.rentDiscount },
-          turnPlayed: true,
-          actionPlayed: true,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            $push: { bonuses: playerVaultType.rentDiscount },
+            turnPlayed: true,
+            actionPlayed: true,
+          },
+          this.serverGateway.getServer(),
+        );
         break;
       case CaseEventType.CASINO:
         if (!autoPlay) {
-          await this.playerService.findByIdAndUpdate(player.id, {
-            $push: { bonuses: playerVaultType.casino_temp },
-          });
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              $push: { bonuses: playerVaultType.casino_temp },
+            },
+            this.serverGateway.getServer(),
+          );
         }
         break;
     }
@@ -687,27 +740,10 @@ export class ServerService {
     let promises = [];
 
     if (house.nextOwner !== '') {
-      promises.push(
-        this.playerMoneyTransaction(
-          house.auction,
-          Bank.id,
-          house.nextOwner,
-          moneyTransactionType.AUCTION,
-          socket,
-          {
-            socketEmitSourcePlayer: true,
-            socketEmitTargetPlayer: true,
-            createTransactionDocument: false,
-            forceTransaction: true,
-          },
-        ),
-      );
-    }
-    promises.push(
-      this.playerMoneyTransaction(
-        newAuction,
-        player.id,
+      await this.playerMoneyTransaction(
+        house.auction,
         Bank.id,
+        house.nextOwner,
         moneyTransactionType.AUCTION,
         socket,
         {
@@ -716,9 +752,21 @@ export class ServerService {
           createTransactionDocument: false,
           forceTransaction: true,
         },
-      ),
+      );
+    }
+    await this.playerMoneyTransaction(
+      newAuction,
+      player.id,
+      Bank.id,
+      moneyTransactionType.AUCTION,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: false,
+        forceTransaction: true,
+      },
     );
-    await Promise.all(promises);
 
     const targetSocketId = await this.getSocketId(house.nextOwner);
 
@@ -837,6 +885,7 @@ export class ServerService {
       monument.bonus,
       player.id,
       ratingTransactionType.MONUMENTS_RATING,
+      this.serverGateway.getServer(),
     );
     await this.userService.statisticsUpdate(
       player.user,
@@ -861,6 +910,7 @@ export class ServerService {
           0,
           house.owner,
           moneyTransactionType.RENT_FRAUD,
+          this.serverGateway.getServer(),
         );
         await this.userService.statisticsUpdate(
           player.user,
@@ -924,6 +974,7 @@ export class ServerService {
       cops,
       targetPlayerId,
       ratingTransactionType.COPS_RATING,
+      this.serverGateway.getServer(),
     );
     const sourcePlayer = await this.playerService.findOneById(sourcePlayerId);
     await this.userService.statisticsUpdate(
@@ -954,9 +1005,13 @@ export class ServerService {
         forceTransaction: false,
       },
     );
-    await this.playerService.findByIdAndUpdate(player.id, {
-      $push: { bonuses: playerVaultType.diploma },
-    });
+    await this.playerService.findByIdAndUpdate(
+      player.id,
+      {
+        $push: { bonuses: playerVaultType.diploma },
+      },
+      this.serverGateway.getServer(),
+    );
     await this.userService.statisticsUpdate(
       player.user,
       AchievementType.student,
@@ -968,9 +1023,13 @@ export class ServerService {
     const lobby = await this.lobbyService.findOne(player.lobby);
     const map = await this.mapService.findOne(lobby.map);
     const targetCaseIndex = map.cases[player.casePosition].nextStationCaseIndex;
-    await this.playerService.findByIdAndUpdate(player.id, {
-      casePosition: targetCaseIndex,
-    });
+    await this.playerService.findByIdAndUpdate(
+      player.id,
+      {
+        casePosition: targetCaseIndex,
+      },
+      this.serverGateway.getServer(),
+    );
     const targetSocketId = await this.getSocketId(player.id);
     await socket.to(targetSocketId).emit(GameEvent.PLAYER_UPDATE, { player });
     await this.userService.statisticsUpdate(
