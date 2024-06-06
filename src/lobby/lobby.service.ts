@@ -73,14 +73,16 @@ export class LobbyService {
       );
       for (let i = 0; i < createLobbyDto.users.length; i++) {
         // Envoyez une notification à chaque utilisateur.
-        operations.push(
-          this.userService.pushNotification({
-            from: createLobbyDto.users[i],
-            to: createLobbyDto.users[i],
-            attached: newLobbyId.toString(),
-            type: 'gameInvite',
-          }),
-        );
+        if (createLobbyDto.users[i] !== ownerId) {
+          operations.push(
+            this.userService.pushNotification({
+              from: createLobbyDto.users[i],
+              to: createLobbyDto.users[i],
+              attached: newLobbyId.toString(),
+              type: 'gameInvite',
+            }),
+          );
+        }
       }
 
       // Créez les maisons
