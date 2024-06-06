@@ -17,6 +17,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClaimAchievementDto } from './dto/claim-achievement.dto';
+import { MessageBody } from '@nestjs/websockets';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -28,15 +29,17 @@ export class UserController {
     return await this.userService.findOne(req.user.data.sub);
   }
 
-  @Get('search')
+  @Post('search')
   @UseGuards(AuthGuard)
   async findOne(
     @Request() req,
     @Body() data: { search: string; page: number; inFriends: boolean },
   ) {
     try {
+      console.log(data)
+      console.log(typeof(data.inFriends))
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-      if (!data.inFriends) {
+      if (data.inFriends === false) {
         return await this.userService.searchUsers(data.search, data.page);
       } else {
         return await this.userService.searchFriends(
