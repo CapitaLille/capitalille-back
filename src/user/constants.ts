@@ -12,8 +12,8 @@ export const lobbyConstants = {
     rating: 2.5,
   },
   restrictions: {
-    maxScheduledTurn: 3600 * 24,
-    minScheduledTurn: 30,
+    maxScheduledTurn: 3600 * 24 * 1000,
+    minScheduledTurn: 30 * 1000,
     maxTurnCount: 100,
     minTurnCount: 10,
   },

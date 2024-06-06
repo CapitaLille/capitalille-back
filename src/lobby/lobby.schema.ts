@@ -21,7 +21,7 @@ export class Lobby {
     min: lobbyConstants.restrictions.minScheduledTurn,
     max: lobbyConstants.restrictions.maxScheduledTurn,
   })
-  turnSchedule: BigInt;
+  turnSchedule: number;
 
   @Prop({ required: true, default: 30, min: 0 })
   turnCount: number;
