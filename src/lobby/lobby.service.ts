@@ -76,7 +76,7 @@ export class LobbyService {
         if (createLobbyDto.users[i] !== ownerId) {
           operations.push(
             this.userService.pushNotification({
-              from: createLobbyDto.users[i],
+              from: ownerId,
               to: createLobbyDto.users[i],
               attached: newLobbyId.toString(),
               type: 'gameInvite',

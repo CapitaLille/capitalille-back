@@ -37,8 +37,11 @@ export class UserService {
     return await this.userModel.findById(userId);
   }
 
-  async searchUsers(search: string, page: number = -1) {
-    if (page !== -1) {
+  async searchUsers(search: string, page: number = 0) {
+    if (page < 0) {
+      throw new ConflictException('Invalid page number');
+    }
+    if (page !== 0) {
       if (search === '') {
         return await this.userModel.find().limit(10);
       }
@@ -58,12 +61,15 @@ export class UserService {
       .skip(page * 10);
   }
 
-  async searchFriends(userId: string, search: string, page: number = -1) {
+  async searchFriends(userId: string, search: string, page: number = 0) {
+    if (page < 0) {
+      throw new ConflictException('Invalid page number');
+    }
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    if (page !== -1) {
+    if (page !== 0) {
       if (search === '') {
         return await this.userModel
           .find({ _id: { $in: user.friends } })
