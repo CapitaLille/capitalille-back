@@ -64,9 +64,20 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     if (page !== -1) {
+      if (search === '') {
+        return await this.userModel
+          .find({ _id: { $in: user.friends } })
+          .limit(10);
+      }
       return await this.userModel
         .find({ nickname: { $regex: search }, _id: { $in: user.friends } })
         .limit(10);
+    }
+    if (search === '') {
+      return await this.userModel
+        .find({ _id: { $in: user.friends } })
+        .limit(10)
+        .skip(page * 10);
     }
     return await this.userModel
       .find({ nickname: { $regex: search }, _id: { $in: user.friends } })
