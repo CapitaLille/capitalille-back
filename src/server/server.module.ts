@@ -39,6 +39,7 @@ import { FilesAzureService } from 'src/fileazure/filesAzure.service';
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
     MongooseModule.forFeature([{ name: 'Map', schema: MapSchema }]),
     MongooseModule.forFeature([{ name: 'House', schema: HouseSchema }]),
+    ServerModule,
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,

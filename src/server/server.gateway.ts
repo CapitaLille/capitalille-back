@@ -68,6 +68,7 @@ export class ServerGateway
     private readonly schedulerService: SchedulerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
+  @WebSocketServer() server: Server;
 
   afterInit(server: Server) {
     this.schedulerService.scheduleLobbies(server);
@@ -85,7 +86,9 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
-    console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
+    const roomDetails = this.server.sockets.adapter.rooms.get(data.lobbyId);
+    console.log(roomDetails);
+    // console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOne(
       socket.handshake.user.sub,
       data.lobbyId,
@@ -94,7 +97,7 @@ export class ServerGateway
       player = await this.lobbyService.joinLobby(
         data.lobbyId,
         socket.handshake.user.sub,
-        socket,
+        this.getServer(),
         data.code,
       );
     }
@@ -110,7 +113,6 @@ export class ServerGateway
           const players = await this.playerService.findAllFromLobby(lobby.id);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
           const users = await this.userService.findByIds(lobby.users);
-          console.log('users from lobby ' + lobby.id, users);
           socket.emit(GameEvent.SUBSCRIBE, {
             lobby,
             houses,
@@ -122,27 +124,55 @@ export class ServerGateway
         },
       );
     } catch (error) {
-      socket.emit(GameEvent.ERROR, { message: error.message });
+      socket.emit(GameEvent.UNSUBSCRIBE, { message: error.message });
     }
   }
 
   @UseGuards(ServerGuard)
-  @SubscribeMessage(PlayerEvent.JOIN_LOBBY)
-  async joinLobby(
+  @SubscribeMessage(PlayerEvent.START_GAME)
+  async startGame(
     @ConnectedSocket() socket: ServerGuardSocket,
-    @MessageBody() data: { lobbyId: string; code: string },
+    @MessageBody() data: { lobbyId: string },
   ) {
+    console.log('startGame', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
-      await this.lobbyService.joinLobby(
+      await this.serverService.gameSession(
         data.lobbyId,
         userId,
         socket,
-        data.code,
+        async (lobby, player, map) => {
+          if (lobby.owner !== userId) {
+            throw new ForbiddenException('Only the owner can start the game');
+          }
+          await this.serverService.startGame(lobby, player, map, socket);
+        },
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
     }
+  }
+
+  // @UseGuards(ServerGuard)
+  // @SubscribeMessage(PlayerEvent.JOIN_LOBBY)
+  // async joinLobby(
+  //   @ConnectedSocket() socket: ServerGuardSocket,
+  //   @MessageBody() data: { lobbyId: string; code: string },
+  // ) {
+  //   const userId = socket.handshake.user.sub;
+  //   try {
+  //     await this.lobbyService.joinLobby(
+  //       data.lobbyId,
+  //       userId,
+  //       socket,
+  //       data.code,
+  //     );
+  //   } catch (error) {
+  //     socket.emit(GameEvent.ERROR, { message: error.message });
+  //   }
+  // }
+  getServer(): Server {
+    return this.server;
   }
 
   @UseGuards(ServerGuard)
