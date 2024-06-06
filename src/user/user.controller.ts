@@ -34,14 +34,18 @@ export class UserController {
     @Request() req,
     @Body() data: { search: string; page: number; inFriends: boolean },
   ) {
-    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-    if (!data.inFriends) {
-      return await this.userService.searchUsers(data.search, data.page);
-    } else {
-      return await this.userService.searchFriends(
-        req.user.data.sub,
-        data.search,
-      );
+    try {
+      if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+      if (!data.inFriends) {
+        return await this.userService.searchUsers(data.search, data.page);
+      } else {
+        return await this.userService.searchFriends(
+          req.user.data.sub,
+          data.search,
+        );
+      }
+    } catch (e) {
+      return new BadRequestException(e.message);
     }
   }
 
