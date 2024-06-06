@@ -21,15 +21,6 @@ export class SearchUserDto {
   @IsString({ message: 'Search must be a string' })
   search: string;
 
-  // isFrieds boolean
-  @ApiProperty({
-    description: 'The isFriends boolean.',
-    type: Boolean,
-  })
-  @IsDefined({ message: 'isFriends is required' })
-  @IsBoolean({ message: 'isFriends must be a boolean' })
-  inFriends: boolean;
-
   //page number, must be positive
   @ApiProperty({
     description: 'The page number.',
