@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpStatus,
   Injectable,
@@ -34,21 +35,30 @@ export class UserService {
   ) {}
 
   async findOne(userId: string) {
+    if(!userId) {
+      throw new BadRequestException('userId not defined in findOne user.')
+    }
     return await this.userModel.findById(userId);
   }
 
   async searchUsers(search: string, page: number = 0) {
+    console.log('no friends')
     if (page < 0) {
       throw new ConflictException('Invalid page number');
     }
-    if (page !== 0) {
+    if(search === undefined) {
+      throw new BadRequestException('Search is not defined.')
+    }
+    if (page === 0) {
       if (search === '') {
+        console.log('empty seatch query')
         return await this.userModel.find().limit(10);
       }
       return await this.userModel
         .find({ nickname: { $regex: search } })
         .limit(10);
     }
+    console.log('search', search);
     if (search === '') {
       return await this.userModel
         .find()
@@ -62,8 +72,12 @@ export class UserService {
   }
 
   async searchFriends(userId: string, search: string, page: number = 0) {
+    console.log('friends true')
     if (page < 0) {
       throw new ConflictException('Invalid page number');
+    }
+    if(search === undefined) {
+      throw new BadRequestException('Search is not defined.')
     }
     const user = await this.userModel.findById(userId);
     if (!user) {
@@ -72,21 +86,21 @@ export class UserService {
     if (page !== 0) {
       if (search === '') {
         return await this.userModel
-          .find({ _id: { $in: user.friends } })
+          .find({ id: { $in: user.friends } })
           .limit(10);
       }
       return await this.userModel
-        .find({ nickname: { $regex: search }, _id: { $in: user.friends } })
+        .find({ nickname: { $regex: search }, id: { $in: user.friends } })
         .limit(10);
     }
     if (search === '') {
       return await this.userModel
-        .find({ _id: { $in: user.friends } })
+        .find({ id: { $in: user.friends } })
         .limit(10)
         .skip(page * 10);
     }
     return await this.userModel
-      .find({ nickname: { $regex: search }, _id: { $in: user.friends } })
+      .find({ nickname: { $regex: search }, id: { $in: user.friends } })
       .limit(10)
       .skip(page * 10);
   }
