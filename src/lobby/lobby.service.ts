@@ -140,7 +140,7 @@ export class LobbyService {
       user.lobbies.push(lobbyId);
       const player = await this.playerService.create(userId, lobbyId);
       await this.userService.findByIdAndUpdate(userId, {
-        $push: { lobbys: lobbyId },
+        $push: { lobbies: lobbyId },
       });
       socket
         .to(lobbyId)
