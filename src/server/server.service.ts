@@ -31,7 +31,7 @@ import {
 } from 'src/player/player.schema';
 import { Server } from 'socket.io';
 import { PlayerService } from 'src/player/player.service';
-import { ServerGuardSocket } from './server.gateway';
+import { ServerGateway, ServerGuardSocket } from './server.gateway';
 import {
   AuctionData,
   Bank,
@@ -63,6 +63,8 @@ export class ServerService {
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => ServerGateway))
+    private readonly serverGateway: ServerGateway,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -99,7 +101,6 @@ export class ServerService {
         this.socketIds.splice(index, 1);
       }
     }
-    console.log('remove', this.socketIds);
   }
 
   async getSocketId(playerId: string) {
@@ -320,6 +321,25 @@ export class ServerService {
     }
   }
 
+  async startGame(
+    lobby: Doc<Lobby>,
+    player: Doc<Player>,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    if (lobby.started) {
+      throw new ForbiddenException('Game already started');
+    }
+    const newLobby = await this.lobbyService.findByIdAndUpdate(lobby.id, {
+      started: true,
+      startTime: new Date(),
+    });
+    await this.serverGateway
+      .getServer()
+      .in(lobby.id)
+      .emit(GameEvent.START_GAME, { lobby: newLobby });
+  }
+
   /**
    * Transfer money from a player to another.
    * @param amount of money to transfer
@@ -478,7 +498,7 @@ export class ServerService {
         await this.houseService.setHouseFailure(
           player.id,
           'electricity',
-          socket,
+          this.serverGateway.getServer(),
         );
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: true,
@@ -486,14 +506,22 @@ export class ServerService {
         });
         break;
       case CaseEventType.FIRE_FAILURE:
-        await this.houseService.setHouseFailure(player.id, 'fire', socket);
+        await this.houseService.setHouseFailure(
+          player.id,
+          'fire',
+          this.serverGateway.getServer(),
+        );
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: true,
           actionPlayed: true,
         });
         break;
       case CaseEventType.WATER_FAILURE:
-        await this.houseService.setHouseFailure(player.id, 'water', socket);
+        await this.houseService.setHouseFailure(
+          player.id,
+          'water',
+          this.serverGateway.getServer(),
+        );
         await this.playerService.findByIdAndUpdate(player.id, {
           turnPlayed: true,
           actionPlayed: true,
@@ -659,7 +687,6 @@ export class ServerService {
     let promises = [];
 
     if (house.nextOwner !== '') {
-      console.log('refund', house.nextOwner, house.auction);
       promises.push(
         this.playerMoneyTransaction(
           house.auction,
@@ -703,7 +730,7 @@ export class ServerService {
           nextOwner: player.id,
           auction: newAuction,
         },
-        socket,
+        this.serverGateway.getServer(),
       ),
     );
     promises.push(

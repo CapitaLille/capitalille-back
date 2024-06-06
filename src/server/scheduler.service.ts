@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { Server } from 'socket.io';
@@ -13,6 +13,7 @@ import { ServerService } from 'src/server/server.service';
 import { Doc, Bank, GameEvent } from 'src/server/server.type';
 import { AchievementType } from 'src/user/user.schema';
 import { UserService } from 'src/user/user.service';
+import { ServerGateway } from './server.gateway';
 
 @Injectable()
 export class SchedulerService {
@@ -20,6 +21,8 @@ export class SchedulerService {
     private schedulerRegistry: SchedulerRegistry,
     private readonly lobbyService: LobbyService,
     private readonly serverService: ServerService,
+    @Inject(forwardRef(() => ServerGateway))
+    private readonly serverGateway: ServerGateway,
     private readonly userService: UserService,
     private readonly playerService: PlayerService,
     private readonly houseService: HouseService,
@@ -134,7 +137,7 @@ export class SchedulerService {
             auction: 0,
             state: 'owned',
           },
-          socket,
+          this.serverGateway.getServer(),
         );
       }
     }
@@ -180,7 +183,7 @@ export class SchedulerService {
         });
       }
       leaderboard.sort((a, b) => b.globalValue - a.globalValue);
-      socket.to(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
+      socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
     }
   }
 
