@@ -7,6 +7,7 @@ import {
   isString,
   IsString,
   IsNumberString,
+  IsBoolean,
 } from 'class-validator';
 import mongoose from 'mongoose';
 
@@ -26,7 +27,7 @@ export class SearchUserDto {
     type: Boolean,
   })
   @IsDefined({ message: 'isFriends is required' })
-  @IsBooleanString({ message: 'isFriends must be a boolean' })
+  @IsBoolean({ message: 'isFriends must be a boolean' })
   inFriends: boolean;
 
   //page number, must be positive
