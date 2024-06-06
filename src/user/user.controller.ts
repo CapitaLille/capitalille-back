@@ -75,7 +75,6 @@ export class UserController {
   @Get('achievements')
   @UseGuards(AuthGuard)
   async getAchievements(@Request() req) {
-    console.log('get achievements');
     if (!req.user.data.sub) throw new BadRequestException('No UID provided');
     return await this.userService.getAchievements(req.user.data.sub);
   }
