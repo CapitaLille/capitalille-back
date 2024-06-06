@@ -24,6 +24,7 @@ export class ServerGuard implements CanActivate {
       context.args[0].handshake.user = payload;
       return true;
     } catch (ex) {
+      console.log('Unauthorized access to the server socket');
       return false;
     }
   }

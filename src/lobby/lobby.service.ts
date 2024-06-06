@@ -17,7 +17,6 @@ import { MapService } from 'src/map/map.service';
 import { CreateLobbyHousesDto } from 'src/house/dto/create-lobby-houses.dto';
 import { AchievementType } from 'src/user/user.schema';
 import { Server } from 'socket.io';
-import { ServerGuardSocket } from 'src/server/server.gateway';
 import { Doc, GameEvent } from 'src/server/server.type';
 import { Player } from 'src/player/player.schema';
 
@@ -34,17 +33,16 @@ export class LobbyService {
 
   async create(createLobbyDto: CreateLobbyDto, ownerId: string) {
     const session = await this.connection.startSession();
-    console.log('createLobbyDto', createLobbyDto);
     try {
       session.startTransaction();
       // Créez le lobby
       const newLobbyId = new mongoose.Types.ObjectId();
       const lobbyCode = nanoid(6);
-      let users = createLobbyDto.users;
+      const users = createLobbyDto.users;
       if (!users.includes(ownerId)) {
         users.push(ownerId);
       }
-      let newLobby = new this.lobbyModel({
+      const newLobby = new this.lobbyModel({
         _id: newLobbyId,
         owner: ownerId,
         users: users,
@@ -92,7 +90,6 @@ export class LobbyService {
       };
       await Promise.all(operations);
       const newL = await newLobby.save();
-      console.log('newL', newL);
       await this.userService.statisticsUpdate(
         ownerId,
         AchievementType.gameCreator,
@@ -113,7 +110,7 @@ export class LobbyService {
   async joinLobby(
     lobbyId: string,
     userId: string,
-    socket: Server | ServerGuardSocket,
+    socket: Server,
     code: string = '',
   ): Promise<Doc<Player>> {
     const lobby = await this.lobbyModel.findById(lobbyId);
@@ -143,7 +140,7 @@ export class LobbyService {
         $push: { lobbys: lobbyId },
       });
       socket
-        .to(lobbyId)
+        .in(lobbyId)
         .emit(GameEvent.NEW_USER, { user: user, player: player });
       await session.commitTransaction();
       return player;
@@ -244,11 +241,9 @@ export class LobbyService {
   }
 
   async presents(userId: string) {
-    console.log('presents');
     const user = await this.userService.findOne(userId);
     const ids = user.lobbies;
     const lobbies = await this.lobbyModel.find({ _id: { $in: ids } });
-    console.log('lobbies', lobbies);
     const extendedLobbies = [];
     for (const lobby of lobbies) {
       const userIds = lobby.users;
@@ -295,7 +290,9 @@ export class LobbyService {
     lobbyId: string,
     update: mongoose.UpdateQuery<Lobby>,
   ) {
-    return await this.lobbyModel.findByIdAndUpdate(lobbyId, update);
+    return await this.lobbyModel.findByIdAndUpdate(lobbyId, update, {
+      new: true,
+    });
   }
 
   async findPrivate(code: string): Promise<Doc<Lobby> | undefined> {

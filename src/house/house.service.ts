@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateLobbyHousesDto } from './dto/create-lobby-houses.dto';
 import { UpdateHouseDto } from './dto/update-house.dto';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
@@ -8,7 +13,7 @@ import { Lobby } from 'src/lobby/lobby.schema';
 import { Doc, GameEvent } from 'src/server/server.type';
 import { Map } from 'src/map/map.schema';
 import { Server } from 'socket.io';
-import { ServerGuardSocket } from 'src/server/server.gateway';
+import { ServerGateway, ServerGuardSocket } from 'src/server/server.gateway';
 
 @Injectable()
 export class HouseService {
@@ -28,7 +33,7 @@ export class HouseService {
           "Can't generate houses for a non-existing lobby",
         );
       }
-      let promises = [];
+      const promises = [];
       for (let i = 0; i < createLobbyHousesDto.map.houses.length; i++) {
         const house = createLobbyHousesDto.map.houses[i];
         const fire =
@@ -177,14 +182,14 @@ export class HouseService {
   async findByIdAndUpdate(
     houseId: string,
     updateHouseDto: mongoose.UpdateQuery<House>,
-    socket: Server | ServerGuardSocket,
+    socket: Server,
   ): Promise<House> {
     const result = await this.houseModel.findByIdAndUpdate(
       houseId,
       updateHouseDto,
     );
     if (socket) {
-      socket.to(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+      socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
     }
     return result;
   }
@@ -192,14 +197,14 @@ export class HouseService {
   async setHouseFailure(
     playerId: string,
     failure: 'fire' | 'water' | 'electricity',
-    socket: Server | ServerGuardSocket,
+    socket: Server,
   ) {
     const result = await this.houseModel.findOneAndUpdate(
       { owner: playerId, [`defect.${failure}`]: true },
       { [`activeDefect.${failure}`]: true },
     );
     if (socket) {
-      socket.to(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+      socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
     }
     return result;
   }

@@ -66,7 +66,6 @@ export class UserService {
   }
 
   async findOneByEmail(email: string) {
-    console.log('email', email);
     return await this.userModel.findOne({ email });
   }
 
@@ -202,7 +201,6 @@ export class UserService {
   }
 
   async findByIds(ids: string[], limit: number = 10) {
-    console.log('ids', ids);
     return await this.userModel.find({ _id: { $in: ids } }).limit(limit);
   }
 
@@ -324,12 +322,12 @@ export class UserService {
 
   async getAchievements(userId: string) {
     const user = await this.userModel.findById(userId);
-    let allAchievements = Achievement.achievements;
+    const allAchievements = Achievement.achievements;
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    let achievementsCompleted = [];
-    let achievementsUncompleted = [];
+    const achievementsCompleted = [];
+    const achievementsUncompleted = [];
 
     for (const achievement of allAchievements) {
       const findCompleted = user.achievements.find(
@@ -535,15 +533,12 @@ export class UserService {
     }
     const containerName = this.configService.get('PROFILE_PICTURES_CONTAINER');
     if (user.pp !== '') {
-      console.log('delete', user.pp);
       await this.fileService.deleteFile(user.pp, containerName);
       await this.userModel.findByIdAndUpdate(userId, {
         pp: '',
       });
     }
-    console.log('upload', file);
     const upload = await this.fileService.uploadFile(file, containerName);
-    console.log('upload', upload);
     await this.userModel.findByIdAndUpdate(userId, {
       pp: upload,
     });
