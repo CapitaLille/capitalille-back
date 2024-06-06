@@ -34,8 +34,6 @@ export class UserController {
   @UseGuards(AuthGuard)
   async findOne(@Request() req, @Body() searchUserDto: SearchUserDto) {
     try {
-      console.log(searchUserDto);
-      console.log(typeof searchUserDto.inFriends);
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
       if (searchUserDto.inFriends === false) {
         return await this.userService.searchUsers(
