@@ -39,9 +39,18 @@ export class UserService {
 
   async searchUsers(search: string, page: number = -1) {
     if (page !== -1) {
+      if (search === '') {
+        return await this.userModel.find().limit(10);
+      }
       return await this.userModel
         .find({ nickname: { $regex: search } })
         .limit(10);
+    }
+    if (search === '') {
+      return await this.userModel
+        .find()
+        .limit(10)
+        .skip(page * 10);
     }
     return await this.userModel
       .find({ nickname: { $regex: search } })
