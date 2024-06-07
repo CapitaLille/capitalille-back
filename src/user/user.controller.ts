@@ -35,11 +35,10 @@ export class UserController {
   async searchUsers(@Request() req, @Body() searchUserDto: SearchUserDto) {
     try {
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-        return await this.userService.searchUsers(
-          searchUserDto.search,
-          searchUserDto.page,
-        );
-      
+      return await this.userService.searchUsers(
+        searchUserDto.search,
+        searchUserDto.page,
+      );
     } catch (e) {
       return new BadRequestException(e.message);
     }
@@ -50,18 +49,15 @@ export class UserController {
   async searchFriends(@Request() req, @Body() searchUserDto: SearchUserDto) {
     try {
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-        return await this.userService.searchFriends(
-          req.user.data.sub,
-          searchUserDto.search,
-          searchUserDto.page,
-        );
-      
+      return await this.userService.searchFriends(
+        req.user.data.sub,
+        searchUserDto.search,
+        searchUserDto.page,
+      );
     } catch (e) {
       return new BadRequestException(e.message);
     }
   }
-
-
 
   @Get(':id')
   @UseGuards(AuthGuard)
@@ -131,13 +127,15 @@ export class UserController {
   async answerNotification(
     @Request() req,
     @Param('notif_id') notifId: string,
-    answer: boolean,
+    answer: number,
   ) {
+    if (![0, 1].includes(answer))
+      throw new BadRequestException('Invalid answer');
     if (!req.user.data.sub) throw new BadRequestException('No UID provided');
     return await this.userService.answerNotification(
       req.user.data.sub,
       notifId,
-      answer,
+      answer === 1 ? true : false,
     );
   }
 }
