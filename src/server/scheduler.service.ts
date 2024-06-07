@@ -74,7 +74,10 @@ export class SchedulerService {
     for (const player of players) {
       if (!player.lost) {
         if (player.turnPlayed === false) {
-          const dice = this.playerService.generateDice(player);
+          const dice = this.playerService.generateDice(
+            player,
+            this.serverGateway.getServer(),
+          );
           const { newPlayer } = await this.serverService.generatePath(
             dice.diceValue,
             map,
@@ -95,10 +98,14 @@ export class SchedulerService {
             socket,
           );
         }
-        await this.playerService.findByIdAndUpdate(player.id, {
-          turnPlayed: false,
-          actionPlayed: false,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            turnPlayed: false,
+            actionPlayed: false,
+          },
+          this.serverGateway.getServer(),
+        );
       }
     }
 
@@ -144,10 +151,14 @@ export class SchedulerService {
 
     for (const player of players) {
       if (player.money < 0 && player.lost === false) {
-        await this.playerService.findByIdAndUpdate(player.id, {
-          money: 0,
-          lost: true,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            money: 0,
+            lost: true,
+          },
+          this.serverGateway.getServer(),
+        );
         const targetSocketId = await this.serverService.getSocketId(
           player.user,
         );

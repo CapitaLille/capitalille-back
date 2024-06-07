@@ -30,26 +30,38 @@ export class UserController {
     return await this.userService.findOne(req.user.data.sub);
   }
 
-  @Post('search')
+  @Post('searchUsers')
   @UseGuards(AuthGuard)
-  async findOne(@Request() req, @Body() searchUserDto: SearchUserDto) {
+  async searchUsers(@Request() req, @Body() searchUserDto: SearchUserDto) {
     try {
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-      if (searchUserDto.inFriends === false) {
         return await this.userService.searchUsers(
           searchUserDto.search,
           searchUserDto.page,
         );
-      } else {
-        return await this.userService.searchFriends(
-          req.user.data.sub,
-          searchUserDto.search,
-        );
-      }
+      
     } catch (e) {
       return new BadRequestException(e.message);
     }
   }
+
+  @Post('searchFriends')
+  @UseGuards(AuthGuard)
+  async searchFriends(@Request() req, @Body() searchUserDto: SearchUserDto) {
+    try {
+      if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+        return await this.userService.searchFriends(
+          req.user.data.sub,
+          searchUserDto.search,
+          searchUserDto.page,
+        );
+      
+    } catch (e) {
+      return new BadRequestException(e.message);
+    }
+  }
+
+
 
   @Get(':id')
   @UseGuards(AuthGuard)
