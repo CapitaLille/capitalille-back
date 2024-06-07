@@ -256,6 +256,9 @@ export class UserService {
     const notification = user.notifications.find(
       (n) => n.uid === notificationId,
     );
+    if (notification.read) {
+      throw new ConflictException('Notification already read');
+    }
     switch (notification.type) {
       case 'friendRequest':
         if (answer) {
