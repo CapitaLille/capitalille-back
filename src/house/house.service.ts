@@ -187,6 +187,7 @@ export class HouseService {
     const result = await this.houseModel.findByIdAndUpdate(
       houseId,
       updateHouseDto,
+      { new: true },
     );
     if (socket) {
       socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
@@ -202,6 +203,7 @@ export class HouseService {
     const result = await this.houseModel.findOneAndUpdate(
       { owner: playerId, [`defect.${failure}`]: true },
       { [`activeDefect.${failure}`]: true },
+      { new: true },
     );
     if (socket) {
       socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });

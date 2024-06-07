@@ -193,12 +193,18 @@ export class ServerService {
         )
       ) {
         totalEarnThisTurn += playerSalary;
-        const direction = Math.round(Math.random());
-        if (direction === 0) {
+        if (path[path.length - 1].next.length > 1) {
+          const direction = Math.round(Math.random());
+          if (direction === 0) {
+            const nextIndex = path[path.length - 1].next[0];
+            path.push(map.cases[nextIndex]);
+          } else if (direction === 1) {
+            const nextIndex = path[path.length - 1].next[1];
+
+            path.push(map.cases[nextIndex]);
+          }
+        } else {
           const nextIndex = path[path.length - 1].next[0];
-          path.push(map.cases[nextIndex]);
-        } else if (direction === 1) {
-          const nextIndex = path[path.length - 1].next[1];
           path.push(map.cases[nextIndex]);
         }
       } else {
