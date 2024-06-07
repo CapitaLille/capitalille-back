@@ -195,7 +195,10 @@ export class ServerGateway
             userId,
             AchievementType.diceLauncher,
           );
-          const dice = this.playerService.generateDice(player);
+          const dice = this.playerService.generateDice(
+            player,
+            this.getServer(),
+          );
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice.diceValue, map, player);
           await socket.emit(GameEvent.PLAYER_UPDATE, {

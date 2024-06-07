@@ -18,19 +18,19 @@ import {
 import { lobbyConstants } from 'src/user/constants';
 import { Bank, Doc, GameEvent, MoneyChangeData } from 'src/server/server.type';
 import { ServerService } from 'src/server/server.service';
-import { ServerGuardSocket } from 'src/server/server.gateway';
+import { ServerGateway, ServerGuardSocket } from 'src/server/server.gateway';
 import { Map } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
+import { Server } from 'socket.io';
 
 @Injectable()
 export class PlayerService {
   constructor(
     @InjectModel('Player') private readonly playerModel: Model<Player>,
-    private readonly userService: UserService,
   ) {}
 
   async create(userId: string, lobbyId: string): Promise<Doc<Player>> {
-    let player = {
+    const player = {
       user: userId,
       lobby: lobbyId,
     };
@@ -57,8 +57,21 @@ export class PlayerService {
     return players;
   }
 
-  async findByIdAndUpdate(playerId: string, update: UpdateQuery<Player>) {
-    return await this.playerModel.findByIdAndUpdate(playerId, update);
+  async findByIdAndUpdate(
+    playerId: string,
+    update: UpdateQuery<Player>,
+    server: Server,
+  ) {
+    const newPlayer = await this.playerModel.findByIdAndUpdate(
+      playerId,
+      update,
+      { new: true },
+    );
+    console.log('Player updated : ', newPlayer.money);
+    await server
+      .in(newPlayer.lobby)
+      .emit(GameEvent.PLAYER_UPDATE, { player: newPlayer });
+    return newPlayer;
   }
 
   deleteOneFromLobby(userId: string, lobbyId: string): Promise<any> {
@@ -101,7 +114,10 @@ export class PlayerService {
    * @param player
    * @returns The dice roll.
    */
-  generateDice(player: Doc<Player>): {
+  generateDice(
+    player: Doc<Player>,
+    Server: Server,
+  ): {
     diceValue: number;
     diceBonuses: playerVaultType[];
   } {
@@ -138,9 +154,13 @@ export class PlayerService {
       dice = Math.round(dice);
       if (dice < 0) dice = 0;
     }
-    this.playerModel.findByIdAndUpdate(player.id, {
-      $pull: { bonuses: { $in: [diceBonuses] } },
-    });
+    this.playerModel.findByIdAndUpdate(
+      player.id,
+      {
+        $pull: { bonuses: { $in: [diceBonuses] } },
+      },
+      Server,
+    );
     return { diceValue: dice, diceBonuses: diceBonuses };
   }
 
@@ -157,6 +177,7 @@ export class PlayerService {
     amount: number,
     targetPlayerId: string,
     type: moneyTransactionType | ratingTransactionType,
+    Server: Server,
   ) {
     try {
       if (amount <= 0) {
@@ -170,9 +191,13 @@ export class PlayerService {
         if (!player) {
           return undefined;
         }
-        await this.findByIdAndUpdate(player.id, {
-          $push: { transactions: { amount, playerId: targetPlayerId, type } },
-        });
+        await this.findByIdAndUpdate(
+          player.id,
+          {
+            $push: { transactions: { amount, playerId: targetPlayerId, type } },
+          },
+          Server,
+        );
       }
       // If the target is the bank, we don't need to update the target player.
       if (targetPlayerId !== Bank.id) {
@@ -180,9 +205,13 @@ export class PlayerService {
         if (!targetPlayer) {
           return undefined;
         }
-        await this.findByIdAndUpdate(targetPlayer.id, {
-          $push: { transactions: { amount, playerId: fromPlayerId, type } },
-        });
+        await this.findByIdAndUpdate(
+          targetPlayer.id,
+          {
+            $push: { transactions: { amount, playerId: fromPlayerId, type } },
+          },
+          Server,
+        );
       }
     } catch (error) {
       console.error('playerGenerateTransaction : ' + error.message);
