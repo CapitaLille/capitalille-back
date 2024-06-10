@@ -200,7 +200,6 @@ export class ServerService {
             path.push(map.cases[nextIndex]);
           } else if (direction === 1) {
             const nextIndex = path[path.length - 1].next[1];
-
             path.push(map.cases[nextIndex]);
           }
         } else {
@@ -212,7 +211,15 @@ export class ServerService {
         path.push(map.cases[nextIndex]);
       }
     }
-    player.casePosition = map.cases.indexOf(path[path.length - 1]);
+    // player.casePosition = map.cases.indexOf(path[path.length - 1]);
+    const newPlayer = await this.playerService.findByIdAndUpdate(
+      player.id,
+      {
+        turnPlayed: true,
+        casePosition: map.cases.indexOf(path[path.length - 1]),
+      },
+      this.serverGateway.getServer(),
+    );
     await this.playerMoneyTransaction(
       totalEarnThisTurn,
       Bank.id,
@@ -226,7 +233,6 @@ export class ServerService {
         forceTransaction: true,
       },
     );
-    const newPlayer = await this.playerService.findOneById(player.id);
     return { path, salary: playerSalary, newPlayer };
   }
 
