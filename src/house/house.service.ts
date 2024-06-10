@@ -14,12 +14,14 @@ import { Doc, GameEvent } from 'src/server/server.type';
 import { Map } from 'src/map/map.schema';
 import { Server } from 'socket.io';
 import { ServerGateway, ServerGuardSocket } from 'src/server/server.gateway';
+import { MapService } from 'src/map/map.service';
 
 @Injectable()
 export class HouseService {
   constructor(
     @InjectModel('House') private readonly houseModel: Model<House>,
     @InjectModel('Lobby') private readonly lobbyModel: Model<Lobby>,
+    private readonly mapService: MapService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -162,6 +164,7 @@ export class HouseService {
   async findWithCase(
     caseIndex: number,
     lobbyId: string,
+    mapId: string,
   ): Promise<
     | (mongoose.Document<unknown, {}, House> &
         House & {
@@ -169,9 +172,17 @@ export class HouseService {
         })
     | undefined
   > {
+    const map = await this.mapService.findOne(mapId);
+    if (!map) {
+      throw new NotFoundException('Map not found');
+    }
+    const houses = map.houses;
+    const houseIndex = houses.findIndex((house) =>
+      house.cases.includes(caseIndex),
+    );
     const house = await this.houseModel.findOne({
       lobby: lobbyId,
-      index: caseIndex,
+      index: houseIndex,
     });
     if (!house) {
       return undefined;

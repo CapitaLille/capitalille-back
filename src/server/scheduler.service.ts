@@ -43,34 +43,38 @@ export class SchedulerService {
     const lobby = await this.lobbyService.findOne(lobbyId);
     const { id, startTime, turnSchedule, turnCount } = lobby;
     const now = new Date();
+    let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
     for (let i = 0; i < turnCount; i++) {
       const turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
       if (turnTime > now) {
+        nextTurnIndex = i;
         nextTurnTime = turnTime;
         break;
       }
     }
 
     if (nextTurnTime) {
-      const jobName = `lobby_${id}_next_turn`;
+      const jobName = `lobby_${id}_next_turn_${nextTurnIndex}`;
       console.log(
         `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toLocaleTimeString()}`,
       );
       this.scheduleCronJob(jobName, nextTurnTime, () => {
-        this.nextTurnLobbyAction(lobby, socket);
+        this.nextTurnLobbyAction(lobby);
         this.scheduleNextTurnForLobby(lobbyId, socket);
       });
     }
   }
 
-  async nextTurnLobbyAction(lobby: Doc<Lobby>, socket: Server) {
+  async nextTurnLobbyAction(lobby: Doc<Lobby>) {
+    const socket = this.serverGateway.getServer();
+    await socket.emit(GameEvent.ERROR, { message: 'Next turn action' });
     if (lobby === undefined) {
       return;
     }
     const map = await this.mapService.findOne(lobby.map);
-
     const players = await this.playerService.findAllFromLobby(lobby.id);
+
     for (const player of players) {
       if (!player.lost) {
         if (player.turnPlayed === false) {
@@ -109,40 +113,101 @@ export class SchedulerService {
       }
     }
 
-    const houses = await this.houseService.findAllSellingFromLobby(lobby.id);
+    const houses = await this.houseService.findAllFromLobby(lobby.id);
     for (const house of houses) {
-      if (house.state !== houseState.OWNED) {
+      if (house.state === houseState.SALE) {
         let auction = house.auction;
+        let promises = [];
         if (house.auction === 0) {
           // Nobody make an auction. Selling to the bank.
           auction = house.price[house.level];
         }
         if (house.nextOwner !== '') {
-          this.userService.statisticsUpdate(
-            house.nextOwner,
-            AchievementType.auctionWinner,
+          promises.push(
+            this.userService.statisticsUpdate(
+              house.nextOwner,
+              AchievementType.auctionWinner,
+            ),
           );
         }
-        await this.serverService.playerMoneyTransaction(
-          auction,
-          house.owner !== '' ? house.owner : Bank.id,
-          house.nextOwner !== '' ? house.nextOwner : Bank.id,
-          moneyTransactionType.HOUSE_TRANSACTION,
-          socket,
-          {
-            socketEmitSourcePlayer: false,
-            socketEmitTargetPlayer: false,
-            forceTransaction: true,
-            createTransactionDocument: true,
-          },
+        promises.push(
+          this.serverService.playerMoneyTransaction(
+            auction,
+            house.owner !== '' ? house.owner : Bank.id,
+            house.nextOwner !== '' ? house.nextOwner : Bank.id,
+            moneyTransactionType.HOUSE_TRANSACTION,
+            socket,
+            {
+              socketEmitSourcePlayer: false,
+              socketEmitTargetPlayer: false,
+              forceTransaction: true,
+              createTransactionDocument: true,
+            },
+          ),
         );
+        promises.push(
+          this.houseService.findByIdAndUpdate(
+            house.id,
+            {
+              owner: house.nextOwner,
+              nextOwner: '',
+              auction: 0,
+              state:
+                house.nextOwner !== '' ? houseState.OWNED : houseState.FREE,
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
+        await Promise.all(promises);
+      }
+      if (house.state === houseState.FREE) {
+        let auction = house.auction;
+        if (house.nextOwner !== '') {
+          let promises = [];
+          promises.push(
+            this.userService.statisticsUpdate(
+              house.nextOwner,
+              AchievementType.auctionWinner,
+            ),
+          );
+          promises.push(
+            this.serverService.playerMoneyTransaction(
+              auction,
+              house.owner !== '' ? house.owner : Bank.id,
+              house.nextOwner !== '' ? house.nextOwner : Bank.id,
+              moneyTransactionType.HOUSE_TRANSACTION,
+              socket,
+              {
+                socketEmitSourcePlayer: false,
+                socketEmitTargetPlayer: false,
+                forceTransaction: true,
+                createTransactionDocument: true,
+              },
+            ),
+          );
+          promises.push(
+            this.houseService.findByIdAndUpdate(
+              house.id,
+              {
+                owner: house.nextOwner,
+                nextOwner: '',
+                auction: 0,
+                state: houseState.OWNED,
+              },
+              this.serverGateway.getServer(),
+            ),
+          );
+          await Promise.all(promises);
+        }
+      }
+      if (house.state === houseState.OWNED && house.owner.length === 0) {
+        // Fix house state if owner is empty
+        console.log('House state fixed.');
         await this.houseService.findByIdAndUpdate(
           house.id,
           {
-            owner: house.nextOwner,
-            nextOwner: '',
+            state: houseState.FREE,
             auction: 0,
-            state: 'owned',
           },
           this.serverGateway.getServer(),
         );

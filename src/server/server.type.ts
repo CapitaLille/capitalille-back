@@ -34,6 +34,7 @@ export enum GameEvent {
   PLAYER_UPDATE = 'playerUpdate',
   NEW_USER = 'userJoin',
   MONEY_CHANGE = 'moneyChange',
+  HOUSE_REPAIR = 'houseRepair',
   RATING_CHANGE = 'ratingChange',
   AUCTION_SET = 'auctionSet',
   AUCTION_EXIT = 'auctionExit',

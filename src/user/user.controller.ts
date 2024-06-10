@@ -17,8 +17,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClaimAchievementDto } from './dto/claim-achievement.dto';
-import { MessageBody } from '@nestjs/websockets';
 import { SearchUserDto } from './dto/search-user.dto';
+
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}

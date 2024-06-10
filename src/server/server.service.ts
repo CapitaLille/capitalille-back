@@ -213,15 +213,20 @@ export class ServerService {
       }
     }
     player.casePosition = map.cases.indexOf(path[path.length - 1]);
-    const newPlayer = await this.playerService.findByIdAndUpdate(
+    await this.playerMoneyTransaction(
+      totalEarnThisTurn,
+      Bank.id,
       player.id,
-      {
-        casePosition: player.casePosition,
-        turnPlayed: true,
-        $inc: { money: totalEarnThisTurn },
-      },
+      moneyTransactionType.SALARY,
       this.serverGateway.getServer(),
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: true,
+      },
     );
+    const newPlayer = await this.playerService.findOneById(player.id);
     return { path, salary: playerSalary, newPlayer };
   }
 
@@ -238,6 +243,9 @@ export class ServerService {
     socket: ServerGuardSocket | Server,
   ): Promise<CaseEventType | GameEvent> {
     const player = await this.playerService.findOneById(playerId);
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    }
     const type = map.cases[player.casePosition].type;
     try {
       switch (type) {
@@ -276,10 +284,20 @@ export class ServerService {
         case CaseType.HOUSE:
           if (autoPlay) {
             // If it's a forced choice, player pay the house rent.
+            const lobby = await this.lobbyService.findOne(player.lobby);
+            if (!lobby) {
+              throw new NotFoundException('Lobby not found');
+            }
             const house = await this.houseService.findWithCase(
               player.casePosition,
               player.lobby,
+              lobby.map,
             );
+            if (!house) {
+              throw new NotFoundException(
+                'House not found at position ' + player.casePosition,
+              );
+            }
             if (house.owner !== player.id && house.owner !== '') {
               const cost = house.rent[house.level];
               // Pay rent
@@ -522,86 +540,90 @@ export class ServerService {
     autoPlay: boolean,
     socket: ServerGuardSocket | Server,
   ): Promise<CaseEventType> {
-    const player = await this.playerService.findOneById(playerId);
-    switch (caseEventType) {
-      case CaseEventType.DICE_DOUBLE:
-        await this.playerService.findByIdAndUpdate(
-          player.id,
-          {
-            $push: { bonuses: playerVaultType.dicePlus2 },
-          },
-          this.serverGateway.getServer(),
-        );
-        break;
-      case CaseEventType.ELECTRICITY_FAILURE:
-        await this.houseService.setHouseFailure(
-          player.id,
-          'electricity',
-          this.serverGateway.getServer(),
-        );
-        await this.playerService.findByIdAndUpdate(
-          player.id,
-          {
-            turnPlayed: true,
-            actionPlayed: true,
-          },
-          this.serverGateway.getServer(),
-        );
-        break;
-      case CaseEventType.FIRE_FAILURE:
-        await this.houseService.setHouseFailure(
-          player.id,
-          'fire',
-          this.serverGateway.getServer(),
-        );
-        await this.playerService.findByIdAndUpdate(
-          player.id,
-          {
-            turnPlayed: true,
-            actionPlayed: true,
-          },
-          this.serverGateway.getServer(),
-        );
-        break;
-      case CaseEventType.WATER_FAILURE:
-        await this.houseService.setHouseFailure(
-          player.id,
-          'water',
-          this.serverGateway.getServer(),
-        );
-        await this.playerService.findByIdAndUpdate(
-          player.id,
-          {
-            turnPlayed: true,
-            actionPlayed: true,
-          },
-          this.serverGateway.getServer(),
-        );
-        break;
-      case CaseEventType.RENT_DISCOUNT:
-        await this.playerService.findByIdAndUpdate(
-          player.id,
-          {
-            $push: { bonuses: playerVaultType.rentDiscount },
-            turnPlayed: true,
-            actionPlayed: true,
-          },
-          this.serverGateway.getServer(),
-        );
-        break;
-      case CaseEventType.CASINO:
-        if (!autoPlay) {
+    try {
+      const player = await this.playerService.findOneById(playerId);
+      switch (caseEventType) {
+        case CaseEventType.DICE_DOUBLE:
           await this.playerService.findByIdAndUpdate(
             player.id,
             {
-              $push: { bonuses: playerVaultType.casino_temp },
+              $push: { bonuses: playerVaultType.dicePlus2 },
             },
             this.serverGateway.getServer(),
           );
-        }
-        break;
+          break;
+        case CaseEventType.ELECTRICITY_FAILURE:
+          await this.houseService.setHouseFailure(
+            player.id,
+            'electricity',
+            this.serverGateway.getServer(),
+          );
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              turnPlayed: true,
+              actionPlayed: true,
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.FIRE_FAILURE:
+          await this.houseService.setHouseFailure(
+            player.id,
+            'fire',
+            this.serverGateway.getServer(),
+          );
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              turnPlayed: true,
+              actionPlayed: true,
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.WATER_FAILURE:
+          await this.houseService.setHouseFailure(
+            player.id,
+            'water',
+            this.serverGateway.getServer(),
+          );
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              turnPlayed: true,
+              actionPlayed: true,
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.RENT_DISCOUNT:
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              $push: { bonuses: playerVaultType.rentDiscount },
+              turnPlayed: true,
+              actionPlayed: true,
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.CASINO:
+          if (!autoPlay) {
+            await this.playerService.findByIdAndUpdate(
+              player.id,
+              {
+                $push: { bonuses: playerVaultType.casino_temp },
+              },
+              this.serverGateway.getServer(),
+            );
+          }
+          break;
+      }
+      return caseEventType;
+    } catch (error) {
+      throw new NotImplementedException('mapEvent : ' + error.message);
     }
-    return caseEventType;
   }
 
   /**
@@ -697,9 +719,20 @@ export class ServerService {
           socket,
         );
         break;
+      case PlayerEvent.REPAIR_HOUSE:
+        await this.repairHouse(player, attachedId as number, map, socket);
+        break;
     }
   }
 
+  /**
+   * Buy a house in auction.
+   * @param lobby
+   * @param player
+   * @param houseIndex
+   * @param map
+   * @param socket
+   */
   async buyAuctionHouse(
     lobby: Doc<Lobby>,
     player: Doc<Player>,
@@ -1024,6 +1057,11 @@ export class ServerService {
     );
   }
 
+  /**
+   * Teleport a player to the next station.
+   * @param playerId
+   * @param socket
+   */
   async teleportPlayer(playerId: string, socket: ServerGuardSocket) {
     const player = await this.playerService.findOneById(playerId);
     const lobby = await this.lobbyService.findOne(player.lobby);
@@ -1041,6 +1079,50 @@ export class ServerService {
     await this.userService.statisticsUpdate(
       player.user,
       AchievementType.teleport,
+    );
+  }
+
+  /**
+   * Repair a house.
+   * @param player
+   * @param houseIndex
+   * @param map
+   * @param socket
+   */
+  async repairHouse(
+    player: Doc<Player>,
+    houseIndex: number,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const house = await this.houseService.findOne(player.lobby, houseIndex);
+    if (player.money < map.configuration.repairCost) {
+      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+      throw new ForbiddenException('Not enough money');
+    }
+    await this.playerMoneyTransaction(
+      map.configuration.repairCost,
+      player.id,
+      Bank.id,
+      moneyTransactionType.REPAIR,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: false,
+      },
+    );
+    await this.houseService.findByIdAndUpdate(
+      house.id,
+      {
+        activeDefect: {
+          electricity: false,
+          fire: false,
+          water: false,
+        },
+      },
+      this.serverGateway.getServer(),
     );
   }
 }
