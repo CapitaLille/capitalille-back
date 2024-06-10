@@ -56,7 +56,7 @@ export enum CaseType {
   HOUSE = 'house',
   INTERSECTION = 'intersection',
   MONUMENTS = 'monuments',
-  COPS = 'cops',
+  COPS = 'police',
   SCHOOL = 'school',
 }
 
@@ -118,6 +118,9 @@ export class Configuration {
     water: number;
     electricity: number;
   };
+
+  @Prop({ required: true })
+  repairCost: number;
 
   @Prop({
     required: false,

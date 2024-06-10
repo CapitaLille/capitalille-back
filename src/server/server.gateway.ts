@@ -87,8 +87,7 @@ export class ServerGateway
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
     const roomDetails = this.server.sockets.adapter.rooms.get(data.lobbyId);
-    console.log(roomDetails);
-    // console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
+    console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOne(
       socket.handshake.user.sub,
       data.lobbyId,
@@ -103,6 +102,7 @@ export class ServerGateway
     }
     this.serverService.setSocketId(player.id, socket.id);
     socket.join(data.lobbyId);
+    console.log(roomDetails);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
@@ -538,6 +538,53 @@ export class ServerGateway
             player.id,
             socket,
           );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.REPAIR_HOUSE)
+  async repairHouse(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    console.log('repairHouse', data.lobbyId, socket.handshake.user.sub);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          if (house.owner !== player.id) {
+            throw new ForbiddenException(
+              'Player is not the owner of the house.',
+            );
+          }
+          if (
+            !house.activeDefect.fire &&
+            !house.activeDefect.water &&
+            !house.activeDefect.electricity
+          ) {
+            this.getServer().to(lobby.id).emit(GameEvent.ERROR, {
+              message: 'Cette maison est en parfait état.',
+            });
+            throw new ForbiddenException('House has no defect.');
+          }
+          await this.serverService.playerAction(
+            PlayerEvent.REPAIR_HOUSE,
+            data.houseIndex,
+            player.id,
+            socket,
+          );
+          await socket.emit(GameEvent.HOUSE_REPAIR);
         },
       );
     } catch (error) {

@@ -4,7 +4,9 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  NotFoundException,
   NotImplementedException,
+  UseFilters,
   forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -45,7 +47,7 @@ export class PlayerService {
     return await this.playerModel.findOne({ user: userId, lobby: lobbyId });
   }
 
-  async findOneById(playerId: string) {
+  async findOneById(playerId: string): Promise<Doc<Player>> {
     return await this.playerModel.findById(playerId);
   }
 
@@ -67,7 +69,9 @@ export class PlayerService {
       update,
       { new: true },
     );
-    console.log('Player updated : ', newPlayer.money);
+    if (!newPlayer) {
+      throw new NotFoundException('Player not found.');
+    }
     await server
       .in(newPlayer.lobby)
       .emit(GameEvent.PLAYER_UPDATE, { player: newPlayer });
@@ -185,6 +189,13 @@ export class PlayerService {
           'Transaction amount must be positive and non-zero.',
         );
       }
+      // console.log(
+      //   'generateTransaction',
+      //   fromPlayerId,
+      //   amount,
+      //   targetPlayerId,
+      //   type,
+      // );
       // If the sender is the bank, we don't need to update the sender player.
       if (fromPlayerId !== Bank.id) {
         const player = await this.findOneById(fromPlayerId);
@@ -194,7 +205,14 @@ export class PlayerService {
         await this.findByIdAndUpdate(
           player.id,
           {
-            $push: { transactions: { amount, playerId: targetPlayerId, type } },
+            $push: {
+              transactions: {
+                amount: -amount,
+                playerId: targetPlayerId,
+                type,
+                date: new Date(),
+              },
+            },
           },
           Server,
         );
@@ -208,7 +226,14 @@ export class PlayerService {
         await this.findByIdAndUpdate(
           targetPlayer.id,
           {
-            $push: { transactions: { amount, playerId: fromPlayerId, type } },
+            $push: {
+              transactions: {
+                amount: amount,
+                playerId: fromPlayerId,
+                type,
+                date: new Date(),
+              },
+            },
           },
           Server,
         );

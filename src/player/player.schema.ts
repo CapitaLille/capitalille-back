@@ -45,6 +45,7 @@ export enum PlayerEvent {
   COPS_COMPLAINT = 'copsRequest',
   SCHOOL_PAY = 'schoolRequest',
   CASINO_GAMBLE = 'casinoRequest',
+  REPAIR_HOUSE = 'repairHouse',
 }
 
 @Schema()
@@ -55,6 +56,8 @@ export class Transaction {
   playerId: string; // Could be the bank.
   @Prop({ required: true })
   type: moneyTransactionType | ratingTransactionType;
+  @Prop({ required: true, default: new Date() })
+  date: Date;
 }
 
 export enum moneyTransactionType {
@@ -65,12 +68,12 @@ export enum moneyTransactionType {
   SELL = 'sell',
   LOAN = 'loan',
   LOAN_REPAY = 'loan_repay',
+  REPAIR = 'repair',
   BUS = 'bus',
   METRO = 'metro',
   SCHOOL = 'school',
   CASINO = 'casino',
   SALARY = 'salary',
-  ACTION = 'action',
   AUCTION = 'auction',
   HOUSE_TRANSACTION = 'house_transaction',
   MONUMENTS_PAY = 'monuments_pay',

@@ -21,7 +21,6 @@ import { bcryptConstants } from './constants';
 import { CreatePushDto } from './dto/create-push.dto';
 import { Notification } from './user.schema';
 import { nanoid } from 'nanoid';
-import { LobbyService } from 'src/lobby/lobby.service';
 import { ConfigService } from '@nestjs/config';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 
