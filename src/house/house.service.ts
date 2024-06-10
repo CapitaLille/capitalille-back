@@ -211,14 +211,18 @@ export class HouseService {
     failure: 'fire' | 'water' | 'electricity',
     socket: Server,
   ) {
-    const result = await this.houseModel.findOneAndUpdate(
-      { owner: playerId, [`defect.${failure}`]: true },
-      { [`activeDefect.${failure}`]: true },
-      { new: true },
-    );
-    if (socket) {
-      socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+    try {
+      const result = await this.houseModel.findOneAndUpdate(
+        { owner: playerId, [`defect.${failure}`]: true },
+        { [`activeDefect.${failure}`]: true },
+        { new: true },
+      );
+      if (socket && result) {
+        socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+      }
+      return result;
+    } catch (error) {
+      throw new NotFoundException('setHouseFailure : ' + error.message);
     }
-    return result;
   }
 }

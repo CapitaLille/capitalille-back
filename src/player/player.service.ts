@@ -64,18 +64,25 @@ export class PlayerService {
     update: UpdateQuery<Player>,
     server: Server,
   ) {
-    const newPlayer = await this.playerModel.findByIdAndUpdate(
-      playerId,
-      update,
-      { new: true },
-    );
-    if (!newPlayer) {
-      throw new NotFoundException('Player not found.');
+    try {
+      const newPlayer = await this.playerModel.findByIdAndUpdate(
+        playerId,
+        update,
+        { new: true },
+      );
+      if (!newPlayer) {
+        throw new NotFoundException('Player not found.');
+      }
+      console.log('Player updated : ', newPlayer.id);
+      await server
+        .in(newPlayer.lobby)
+        .emit(GameEvent.PLAYER_UPDATE, { player: newPlayer });
+      return newPlayer;
+    } catch (error) {
+      throw new NotImplementedException(
+        'findByIdAndUpdatePlayer : ' + error.message,
+      );
     }
-    await server
-      .in(newPlayer.lobby)
-      .emit(GameEvent.PLAYER_UPDATE, { player: newPlayer });
-    return newPlayer;
   }
 
   deleteOneFromLobby(userId: string, lobbyId: string): Promise<any> {
@@ -189,13 +196,13 @@ export class PlayerService {
           'Transaction amount must be positive and non-zero.',
         );
       }
-      // console.log(
-      //   'generateTransaction',
-      //   fromPlayerId,
-      //   amount,
-      //   targetPlayerId,
-      //   type,
-      // );
+      console.log(
+        'generateTransactionRent',
+        fromPlayerId,
+        amount,
+        targetPlayerId,
+        type,
+      );
       // If the sender is the bank, we don't need to update the sender player.
       if (fromPlayerId !== Bank.id) {
         const player = await this.findOneById(fromPlayerId);
