@@ -17,18 +17,19 @@ import {
   User,
 } from './user.schema';
 import * as bcrypt from 'bcrypt';
-import { bcryptConstants } from './constants';
 import { CreatePushDto } from './dto/create-push.dto';
 import { Notification } from './user.schema';
 import { nanoid } from 'nanoid';
 import { ConfigService } from '@nestjs/config';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
+import { ConstantsService } from './constants';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly configService: ConfigService,
     private readonly fileService: FilesAzureService,
+    private readonly constantsService: ConstantsService,
     @InjectModel('User') private readonly userModel: Model<User>,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
@@ -639,7 +640,7 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     const hashedPassword = await bcrypt
-      .hash(newPassword, bcryptConstants.salt)
+      .hash(newPassword, this.constantsService.bcryptConstants.salt)
       .catch((e) => {
         throw new ConflictException(e.message);
       });
