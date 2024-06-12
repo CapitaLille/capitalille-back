@@ -1,16 +1,17 @@
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+@Injectable()
 export class ConstantsService {
-  constructor(private configService: ConfigService) {}
+  jwtConstants: { secret: string };
+  bcryptConstants: { salt: number };
 
-  get jwtConstants() {
-    return {
+  constructor(private configService: ConfigService) {
+    // Initialize jwtConstants and bcryptConstants in the constructor
+    this.jwtConstants = {
       secret: this.configService.get<string>('JWT_SECRET'),
     };
-  }
-
-  get bcryptConstants() {
-    return {
+    this.bcryptConstants = {
       salt: this.configService.get<number>('BCRYPT_SALT'),
     };
   }
