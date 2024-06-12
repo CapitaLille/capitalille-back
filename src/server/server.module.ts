@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ServerGateway } from './server.gateway';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { jwtConstants } from 'src/user/constants';
 import { UserService } from 'src/user/user.service';
-import { UserModule } from 'src/user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema } from 'src/user/user.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
@@ -16,6 +14,10 @@ import { MapSchema } from 'src/map/map.schema';
 import { HouseSchema } from 'src/house/house.schema';
 import { ServerService } from './server.service';
 import { SchedulerService } from './scheduler.service';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { FilesAzureService } from 'src/fileazure/filesAzure.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConstantsService } from 'src/user/constants';
 
 @Module({
   providers: [
@@ -23,11 +25,14 @@ import { SchedulerService } from './scheduler.service';
     ServerGateway,
     JwtService,
     UserService,
+    ConstantsService,
     LobbyService,
     PlayerService,
     SchedulerService,
+    SchedulerRegistry,
     MapService,
     HouseService,
+    FilesAzureService,
   ],
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
@@ -35,9 +40,14 @@ import { SchedulerService } from './scheduler.service';
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
     MongooseModule.forFeature([{ name: 'Map', schema: MapSchema }]),
     MongooseModule.forFeature([{ name: 'House', schema: HouseSchema }]),
-    JwtModule.register({
-      global: true,
-      secret: jwtConstants.secret,
+    ServerModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        global: true,
+        secret: configService.get<string>('JWT_SECRET'),
+      }),
+      inject: [ConfigService],
     }),
   ],
 })

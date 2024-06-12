@@ -34,12 +34,15 @@ import mongoose from 'mongoose';
 import { ServerService } from './server.service';
 import {
   PlayerEvent,
+  moneyTransactionType,
   playerVaultType,
-  transactionType,
 } from 'src/player/player.schema';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler.service';
 import { CaseEventType, CaseType } from 'src/map/map.schema';
+import { UserService } from 'src/user/user.service';
+import { Achievement, AchievementType } from 'src/user/user.schema';
+import { LobbyService } from 'src/lobby/lobby.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -59,10 +62,13 @@ export class ServerGateway
     private readonly houseService: HouseService,
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
+    private readonly lobbyService: LobbyService,
     private readonly mapService: MapService,
+    private readonly userService: UserService,
     private readonly schedulerService: SchedulerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
+  @WebSocketServer() server: Server;
 
   afterInit(server: Server) {
     this.schedulerService.scheduleLobbies(server);
@@ -78,46 +84,95 @@ export class ServerGateway
   @SubscribeMessage(PlayerEvent.SUBSCRIBE)
   async suscribe(
     @ConnectedSocket() socket: ServerGuardSocket,
-    @MessageBody() data: { lobbyId: string },
+    @MessageBody() data: { lobbyId: string; code: string },
   ) {
+    const roomDetails = this.server.sockets.adapter.rooms.get(data.lobbyId);
     console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
-    this.serverService.setSocketId(socket.handshake.user.sub, socket.id);
-    const player = await this.playerService.findOne(
+    let player = await this.playerService.findOne(
       socket.handshake.user.sub,
       data.lobbyId,
     );
     if (!player) {
-      throw new NotFoundException('Player not found');
-    } else {
-      console.log(
-        'player join the lobby :',
+      player = await this.lobbyService.joinLobby(
         data.lobbyId,
-        ' playerId :',
         socket.handshake.user.sub,
+        this.getServer(),
+        data.code,
       );
-      socket.join(data.lobbyId);
-      const userId = socket.handshake.user.sub;
-      try {
-        await this.serverService.gameSession(
-          data.lobbyId,
-          userId,
-          socket,
-          async (lobby, player, map) => {
-            const players = await this.playerService.findAllFromLobby(lobby.id);
-            const houses = await this.houseService.findAllFromLobby(lobby.id);
-            socket.emit(GameEvent.SUBSCRIBE, {
-              lobby,
-              houses,
-              players,
-              map,
-              player,
-            });
-          },
-        );
-      } catch (error) {
-        socket.emit(GameEvent.ERROR, { message: error.message });
-      }
     }
+    this.serverService.setSocketId(player.id, socket.id);
+    socket.join(data.lobbyId);
+    console.log(roomDetails);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const players = await this.playerService.findAllFromLobby(lobby.id);
+          const houses = await this.houseService.findAllFromLobby(lobby.id);
+          const users = await this.userService.findByIds(lobby.users);
+          socket.emit(GameEvent.SUBSCRIBE, {
+            lobby,
+            houses,
+            players,
+            users,
+            map,
+            player,
+          });
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.UNSUBSCRIBE, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.START_GAME)
+  async startGame(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    console.log('startGame', data.lobbyId, socket.handshake.user.sub);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          if (lobby.owner !== userId) {
+            throw new ForbiddenException('Only the owner can start the game');
+          }
+          await this.serverService.startGame(lobby, player, map, socket);
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  // @UseGuards(ServerGuard)
+  // @SubscribeMessage(PlayerEvent.JOIN_LOBBY)
+  // async joinLobby(
+  //   @ConnectedSocket() socket: ServerGuardSocket,
+  //   @MessageBody() data: { lobbyId: string; code: string },
+  // ) {
+  //   const userId = socket.handshake.user.sub;
+  //   try {
+  //     await this.lobbyService.joinLobby(
+  //       data.lobbyId,
+  //       userId,
+  //       socket,
+  //       data.code,
+  //     );
+  //   } catch (error) {
+  //     socket.emit(GameEvent.ERROR, { message: error.message });
+  //   }
+  // }
+  getServer(): Server {
+    return this.server;
   }
 
   @UseGuards(ServerGuard)
@@ -126,7 +181,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string },
   ) {
-    console.log('playTurn', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
@@ -137,11 +191,20 @@ export class ServerGateway
           if (player.turnPlayed) {
             throw new ForbiddenException('Player already played his turn');
           }
-          const dice = this.playerService.generateDice(player);
+          this.userService.statisticsUpdate(
+            userId,
+            AchievementType.diceLauncher,
+          );
+          const dice = this.playerService.generateDice(
+            player,
+            this.getServer(),
+          );
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice.diceValue, map, player);
-          console.log(path, salary, newPlayer);
-          await this.serverService.mandatoryAction(
+          await socket.emit(GameEvent.PLAYER_UPDATE, {
+            player: newPlayer,
+          });
+          const action = await this.serverService.mandatoryAction(
             map,
             newPlayer.id,
             false,
@@ -151,6 +214,7 @@ export class ServerGateway
             diceBonuses: dice.diceBonuses,
             path,
             salary,
+            action,
           });
         },
       );
@@ -172,98 +236,12 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          const house = await this.houseService.findOne(
-            lobby.id,
+          await this.serverService.playerAction(
+            PlayerEvent.BUY_AUCTION,
             data.houseIndex,
+            player.id,
+            socket,
           );
-          const nearestCases = this.mapService.getNearestCases(
-            map,
-            player.casePosition,
-          );
-          if (
-            !nearestCases.some((element) =>
-              map.houses[data.houseIndex].cases.includes(element),
-            )
-          ) {
-            socket.emit(GameEvent.ERROR, {
-              message: 'House is too far away',
-            });
-            throw new ForbiddenException(
-              'House is too far away, nearest : ' +
-                nearestCases.join(', ') +
-                '. Player pos : ' +
-                player.casePosition +
-                '. House pos : ' +
-                map.houses[data.houseIndex].cases.join(','),
-            );
-          }
-          if (house.state !== 'free' && house.state !== 'sale') {
-            socket.emit(GameEvent.ERROR, {
-              message: 'House is not for sale',
-            });
-            throw new ForbiddenException('House is not for sale');
-          }
-          const actualAuction = house.auction;
-          const newAuction = this.houseService.getAuctionPrice(map, house);
-          if (player.money < newAuction) {
-            socket.emit(GameEvent.ERROR, {
-              message: 'Player does not have enough money',
-            });
-            throw new ForbiddenException('Player does not have enough money');
-          }
-          let promises = [];
-
-          if (house.nextOwner !== '') {
-            console.log('refund', house.nextOwner, house.auction);
-            promises.push(
-              this.serverService.playerMoneyTransaction(
-                house.auction,
-                Bank.id,
-                house.nextOwner,
-                transactionType.AUCTION,
-                socket,
-              ),
-            );
-          }
-          promises.push(
-            this.serverService.playerMoneyTransaction(
-              newAuction,
-              player.id,
-              Bank.id,
-              transactionType.AUCTION,
-              socket,
-            ),
-          );
-          await Promise.all(promises);
-
-          const targetSocketId = await this.serverService.getSocketId(
-            house.nextOwner,
-          );
-
-          promises = [];
-          promises.push(
-            this.houseService.findByIdAndUpdate(house.id, {
-              nextOwner: player.id,
-              auction: newAuction,
-            }),
-          );
-          promises.push(
-            socket
-              .to(targetSocketId)
-              .emit(
-                GameEvent.AUCTION_EXIT,
-                new AuctionData(data.houseIndex, player.id, newAuction),
-              ),
-          );
-          promises.push(
-            socket
-              .to(lobby.id)
-              .emit(
-                GameEvent.AUCTION_SET,
-                new AuctionData(data.houseIndex, userId, newAuction),
-              ),
-          );
-          await Promise.all(promises);
         },
       );
     } catch (error) {
@@ -284,7 +262,7 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.BANK_LOAN_TAKE,
             undefined,
             player.id,
@@ -328,7 +306,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_FRAUD,
             data.houseIndex,
             player.id,
@@ -372,7 +350,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_PAY,
             data.houseIndex,
             player.id,
@@ -404,7 +382,7 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.METRO_PAY,
             undefined,
             player.id,
@@ -430,7 +408,7 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.BUS_PAY,
             undefined,
             player.id,
@@ -459,7 +437,7 @@ export class ServerGateway
           if (map.cases[player.casePosition].type !== CaseType.MONUMENTS) {
             throw new ForbiddenException('Player is not on a monuments case');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.MONUMENTS_PAY,
             undefined,
             player.id,
@@ -488,7 +466,7 @@ export class ServerGateway
           if (map.cases[player.casePosition].type !== CaseType.COPS) {
             throw new ForbiddenException('Player is not on a cops case');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.COPS_COMPLAINT,
             data.targetPlayerId,
             player.id,
@@ -517,7 +495,7 @@ export class ServerGateway
           if (map.cases[player.casePosition].type !== CaseType.SCHOOL) {
             throw new ForbiddenException('Player is not on a school case');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.SCHOOL_PAY,
             undefined,
             player.id,
@@ -554,12 +532,59 @@ export class ServerGateway
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
           }
-          await this.serverService.mapEventAction(
+          await this.serverService.playerAction(
             PlayerEvent.CASINO_GAMBLE,
             undefined,
             player.id,
             socket,
           );
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.REPAIR_HOUSE)
+  async repairHouse(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    console.log('repairHouse', data.lobbyId, socket.handshake.user.sub);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          if (house.owner !== player.id) {
+            throw new ForbiddenException(
+              'Player is not the owner of the house.',
+            );
+          }
+          if (
+            !house.activeDefect.fire &&
+            !house.activeDefect.water &&
+            !house.activeDefect.electricity
+          ) {
+            this.getServer().to(lobby.id).emit(GameEvent.ERROR, {
+              message: 'Cette maison est en parfait état.',
+            });
+            throw new ForbiddenException('House has no defect.');
+          }
+          await this.serverService.playerAction(
+            PlayerEvent.REPAIR_HOUSE,
+            data.houseIndex,
+            player.id,
+            socket,
+          );
+          await socket.emit(GameEvent.HOUSE_REPAIR);
         },
       );
     } catch (error) {

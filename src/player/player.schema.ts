@@ -13,7 +13,7 @@ export class Player {
   houses: number[];
   @Prop({ required: false, default: 0 })
   money: number;
-  @Prop({ required: false, default: 2.5 })
+  @Prop({ required: false, default: 2.5, min: 0, max: 5 })
   rating: number;
   @Prop({ required: false, default: 0 })
   casePosition: number;
@@ -27,9 +27,15 @@ export class Player {
   actionPlayed: boolean;
   @Prop({ required: false, default: false })
   lost: boolean;
+  @Prop({ required: true })
+  nickname: string;
+  @Prop({ required: true })
+  pp: string;
 }
 
 export enum PlayerEvent {
+  JOIN_LOBBY = 'joinLobby',
+  START_GAME = 'startGame',
   PLAY_TURN = 'playTurn',
   SUBSCRIBE = 'subscribe',
   BUY_AUCTION = 'auction',
@@ -43,6 +49,7 @@ export enum PlayerEvent {
   COPS_COMPLAINT = 'copsRequest',
   SCHOOL_PAY = 'schoolRequest',
   CASINO_GAMBLE = 'casinoRequest',
+  REPAIR_HOUSE = 'repairHouse',
 }
 
 @Schema()
@@ -50,21 +57,35 @@ export class Transaction {
   @Prop({ required: true })
   amount: number;
   @Prop({ required: true })
-  playerId: string;
+  playerId: string; // Could be the bank.
   @Prop({ required: true })
-  type: transactionType;
+  type: moneyTransactionType | ratingTransactionType;
+  @Prop({ required: true, default: new Date() })
+  date: Date;
 }
 
-export enum transactionType {
+export enum moneyTransactionType {
   RENT = 'rent',
+  RENT_FINED = 'rent_fined',
+  RENT_FRAUD = 'rent_fraud',
   BUY = 'buy',
   SELL = 'sell',
   LOAN = 'loan',
   LOAN_REPAY = 'loan_repay',
+  REPAIR = 'repair',
+  BUS = 'bus',
+  METRO = 'metro',
+  SCHOOL = 'school',
+  CASINO = 'casino',
   SALARY = 'salary',
-  ACTION = 'action',
   AUCTION = 'auction',
   HOUSE_TRANSACTION = 'house_transaction',
+  MONUMENTS_PAY = 'monuments_pay',
+}
+
+export enum ratingTransactionType {
+  MONUMENTS_RATING = 'monuments_rating',
+  COPS_RATING = 'cops_rating',
 }
 
 export enum playerVaultType {

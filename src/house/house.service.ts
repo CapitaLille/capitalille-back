@@ -1,18 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateLobbyHousesDto } from './dto/create-lobby-houses.dto';
 import { UpdateHouseDto } from './dto/update-house.dto';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { House } from './house.schema';
 import { Lobby } from 'src/lobby/lobby.schema';
-import { Doc } from 'src/server/server.type';
+import { Doc, GameEvent } from 'src/server/server.type';
 import { Map } from 'src/map/map.schema';
+import { Server } from 'socket.io';
+import { ServerGateway, ServerGuardSocket } from 'src/server/server.gateway';
+import { MapService } from 'src/map/map.service';
 
 @Injectable()
 export class HouseService {
   constructor(
     @InjectModel('House') private readonly houseModel: Model<House>,
     @InjectModel('Lobby') private readonly lobbyModel: Model<Lobby>,
+    private readonly mapService: MapService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
@@ -26,7 +35,7 @@ export class HouseService {
           "Can't generate houses for a non-existing lobby",
         );
       }
-      let promises = [];
+      const promises = [];
       for (let i = 0; i < createLobbyHousesDto.map.houses.length; i++) {
         const house = createLobbyHousesDto.map.houses[i];
         const fire =
@@ -112,16 +121,6 @@ export class HouseService {
     return houses;
   }
 
-  async setHouseFailure(
-    playerId: string,
-    failure: 'fire' | 'water' | 'electricity',
-  ) {
-    return await this.houseModel.findOneAndUpdate(
-      { owner: playerId, [`defect.${failure}`]: true },
-      { [`activeDefect.${failure}`]: true },
-    );
-  }
-
   /**
    * Get the auction price of a house based on the map configuration.
    * @param map
@@ -151,13 +150,6 @@ export class HouseService {
     return await this.houseModel.find();
   }
 
-  async findByIdAndUpdate(
-    houseId: string,
-    updateHouseDto: mongoose.UpdateQuery<House>,
-  ): Promise<House> {
-    return await this.houseModel.findByIdAndUpdate(houseId, updateHouseDto);
-  }
-
   async findOne(lobbyId: string, houseIndex: any) {
     const house = await this.houseModel.findOne({
       lobby: lobbyId,
@@ -172,6 +164,7 @@ export class HouseService {
   async findWithCase(
     caseIndex: number,
     lobbyId: string,
+    mapId: string,
   ): Promise<
     | (mongoose.Document<unknown, {}, House> &
         House & {
@@ -179,13 +172,57 @@ export class HouseService {
         })
     | undefined
   > {
+    const map = await this.mapService.findOne(mapId);
+    if (!map) {
+      throw new NotFoundException('Map not found');
+    }
+    const houses = map.houses;
+    const houseIndex = houses.findIndex((house) =>
+      house.cases.includes(caseIndex),
+    );
     const house = await this.houseModel.findOne({
       lobby: lobbyId,
-      index: caseIndex,
+      index: houseIndex,
     });
     if (!house) {
       return undefined;
     }
     return house;
+  }
+
+  async findByIdAndUpdate(
+    houseId: string,
+    updateHouseDto: mongoose.UpdateQuery<House>,
+    socket: Server,
+  ): Promise<House> {
+    const result = await this.houseModel.findByIdAndUpdate(
+      houseId,
+      updateHouseDto,
+      { new: true },
+    );
+    if (socket) {
+      socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+    }
+    return result;
+  }
+
+  async setHouseFailure(
+    playerId: string,
+    failure: 'fire' | 'water' | 'electricity',
+    socket: Server,
+  ) {
+    try {
+      const result = await this.houseModel.findOneAndUpdate(
+        { owner: playerId, [`defect.${failure}`]: true },
+        { [`activeDefect.${failure}`]: true },
+        { new: true },
+      );
+      if (socket && result) {
+        socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+      }
+      return result;
+    } catch (error) {
+      throw new NotFoundException('setHouseFailure : ' + error.message);
+    }
   }
 }

@@ -1,12 +1,15 @@
 import { CanActivate, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Observable } from 'rxjs';
-import { jwtConstants } from 'src/user/constants';
+import { ConstantsService } from 'src/user/constants';
 import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class ServerGuard implements CanActivate {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly constantsService: ConstantsService,
+  ) {}
 
   async canActivate(
     context: any,
@@ -18,12 +21,13 @@ export class ServerGuard implements CanActivate {
     try {
       const payload: authPayload = (
         await this.jwt.verifyAsync(bearerToken, {
-          secret: jwtConstants.secret,
+          secret: this.constantsService.jwtConstants.secret,
         })
       ).data;
       context.args[0].handshake.user = payload;
       return true;
     } catch (ex) {
+      console.log('Unauthorized access to the server socket');
       return false;
     }
   }

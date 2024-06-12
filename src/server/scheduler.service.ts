@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { Server } from 'socket.io';
@@ -6,12 +6,14 @@ import { houseState } from 'src/house/house.schema';
 import { HouseService } from 'src/house/house.service';
 import { Lobby } from 'src/lobby/lobby.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
-import { CaseType } from 'src/map/map.schema';
 import { MapService } from 'src/map/map.service';
-import { transactionType } from 'src/player/player.schema';
+import { moneyTransactionType } from 'src/player/player.schema';
 import { PlayerService } from 'src/player/player.service';
 import { ServerService } from 'src/server/server.service';
 import { Doc, Bank, GameEvent } from 'src/server/server.type';
+import { AchievementType } from 'src/user/user.schema';
+import { UserService } from 'src/user/user.service';
+import { ServerGateway } from './server.gateway';
 
 @Injectable()
 export class SchedulerService {
@@ -19,6 +21,9 @@ export class SchedulerService {
     private schedulerRegistry: SchedulerRegistry,
     private readonly lobbyService: LobbyService,
     private readonly serverService: ServerService,
+    @Inject(forwardRef(() => ServerGateway))
+    private readonly serverGateway: ServerGateway,
+    private readonly userService: UserService,
     private readonly playerService: PlayerService,
     private readonly houseService: HouseService,
     private readonly mapService: MapService,
@@ -26,7 +31,7 @@ export class SchedulerService {
 
   async scheduleLobbies(socket: Server) {
     const lobbies = await this.lobbyService.findAllRunning();
-    let promises = [];
+    const promises = [];
     lobbies.forEach(async (lobby) => {
       promises.push(this.scheduleNextTurnForLobby(lobby.id, socket));
     });
@@ -38,49 +43,45 @@ export class SchedulerService {
     const lobby = await this.lobbyService.findOne(lobbyId);
     const { id, startTime, turnSchedule, turnCount } = lobby;
     const now = new Date();
+    let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
-    console.log(
-      'Scheduling next turn for lobby',
-      id,
-      'at',
-      startTime,
-      'every',
-      turnSchedule,
-      'seconds for',
-      turnCount,
-      'turns',
-    );
     for (let i = 0; i < turnCount; i++) {
       const turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
       if (turnTime > now) {
+        nextTurnIndex = i;
         nextTurnTime = turnTime;
         break;
       }
     }
 
     if (nextTurnTime) {
-      const jobName = `lobby_${id}_next_turn`;
+      const jobName = `lobby_${id}_next_turn_${nextTurnIndex}`;
       console.log(
         `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toLocaleTimeString()}`,
       );
       this.scheduleCronJob(jobName, nextTurnTime, () => {
-        this.nextTurnLobbyAction(lobby, socket);
+        this.nextTurnLobbyAction(lobby);
         this.scheduleNextTurnForLobby(lobbyId, socket);
       });
     }
   }
 
-  async nextTurnLobbyAction(lobby: Doc<Lobby>, socket: Server) {
+  async nextTurnLobbyAction(lobby: Doc<Lobby>) {
+    const socket = this.serverGateway.getServer();
+    await socket.emit(GameEvent.ERROR, { message: 'Next turn action' });
     if (lobby === undefined) {
       return;
     }
     const map = await this.mapService.findOne(lobby.map);
-
     const players = await this.playerService.findAllFromLobby(lobby.id);
+
     for (const player of players) {
       if (!player.lost) {
         if (player.turnPlayed === false) {
-          const dice = this.playerService.generateDice(player);
+          const dice = this.playerService.generateDice(
+            player,
+            this.serverGateway.getServer(),
+          );
           const { newPlayer } = await this.serverService.generatePath(
             dice.diceValue,
             map,
@@ -101,44 +102,128 @@ export class SchedulerService {
             socket,
           );
         }
-        await this.playerService.findByIdAndUpdate(player.id, {
-          turnPlayed: false,
-          actionPlayed: false,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            turnPlayed: false,
+            actionPlayed: false,
+          },
+          this.serverGateway.getServer(),
+        );
       }
     }
 
-    const houses = await this.houseService.findAllSellingFromLobby(lobby.id);
+    const houses = await this.houseService.findAllFromLobby(lobby.id);
     for (const house of houses) {
-      if (house.state !== houseState.OWNED) {
+      if (house.state === houseState.SALE) {
         let auction = house.auction;
+        let promises = [];
         if (house.auction === 0) {
-          // Selling to the bank.
+          // Nobody make an auction. Selling to the bank.
           auction = house.price[house.level];
         }
-        await this.serverService.playerMoneyTransaction(
-          auction,
-          house.owner !== '' ? house.owner : Bank.id,
-          house.nextOwner !== '' ? house.nextOwner : Bank.id,
-          transactionType.HOUSE_TRANSACTION,
-          socket,
-          true,
+        if (house.nextOwner !== '') {
+          promises.push(
+            this.userService.statisticsUpdate(
+              house.nextOwner,
+              AchievementType.auctionWinner,
+            ),
+          );
+        }
+        promises.push(
+          this.serverService.playerMoneyTransaction(
+            auction,
+            house.owner !== '' ? house.owner : Bank.id,
+            house.nextOwner !== '' ? house.nextOwner : Bank.id,
+            moneyTransactionType.HOUSE_TRANSACTION,
+            socket,
+            {
+              socketEmitSourcePlayer: false,
+              socketEmitTargetPlayer: false,
+              forceTransaction: true,
+              createTransactionDocument: true,
+            },
+          ),
         );
-        await this.houseService.findByIdAndUpdate(house.id, {
-          owner: house.nextOwner,
-          nextOwner: '',
-          auction: 0,
-          state: 'owned',
-        });
+        promises.push(
+          this.houseService.findByIdAndUpdate(
+            house.id,
+            {
+              owner: house.nextOwner,
+              nextOwner: '',
+              auction: 0,
+              state:
+                house.nextOwner !== '' ? houseState.OWNED : houseState.FREE,
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
+        await Promise.all(promises);
+      }
+      if (house.state === houseState.FREE) {
+        let auction = house.auction;
+        if (house.nextOwner !== '') {
+          let promises = [];
+          promises.push(
+            this.userService.statisticsUpdate(
+              house.nextOwner,
+              AchievementType.auctionWinner,
+            ),
+          );
+          promises.push(
+            this.serverService.playerMoneyTransaction(
+              auction,
+              house.owner !== '' ? house.owner : Bank.id,
+              house.nextOwner !== '' ? house.nextOwner : Bank.id,
+              moneyTransactionType.HOUSE_TRANSACTION,
+              socket,
+              {
+                socketEmitSourcePlayer: false,
+                socketEmitTargetPlayer: false,
+                forceTransaction: true,
+                createTransactionDocument: true,
+              },
+            ),
+          );
+          promises.push(
+            this.houseService.findByIdAndUpdate(
+              house.id,
+              {
+                owner: house.nextOwner,
+                nextOwner: '',
+                auction: 0,
+                state: houseState.OWNED,
+              },
+              this.serverGateway.getServer(),
+            ),
+          );
+          await Promise.all(promises);
+        }
+      }
+      if (house.state === houseState.OWNED && house.owner.length === 0) {
+        // Fix house state if owner is empty
+        console.log('House state fixed.');
+        await this.houseService.findByIdAndUpdate(
+          house.id,
+          {
+            state: houseState.FREE,
+            auction: 0,
+          },
+          this.serverGateway.getServer(),
+        );
       }
     }
 
     for (const player of players) {
       if (player.money < 0 && player.lost === false) {
-        await this.playerService.findByIdAndUpdate(player.id, {
-          money: 0,
-          lost: true,
-        });
+        await this.playerService.findByIdAndUpdate(
+          player.id,
+          {
+            money: 0,
+            lost: true,
+          },
+          this.serverGateway.getServer(),
+        );
         const targetSocketId = await this.serverService.getSocketId(
           player.user,
         );
@@ -155,6 +240,10 @@ export class SchedulerService {
       const houses = await this.houseService.findAllFromLobby(lobby.id);
       const leaderboard = [];
       for (const player of players) {
+        this.userService.statisticsUpdate(
+          player.user,
+          AchievementType.playGame,
+        );
         let housesValue = 0;
         for (const houseIndex of player.houses) {
           const house = houses.find((e) => {
@@ -170,7 +259,7 @@ export class SchedulerService {
         });
       }
       leaderboard.sort((a, b) => b.globalValue - a.globalValue);
-      socket.to(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
+      socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
     }
   }
 

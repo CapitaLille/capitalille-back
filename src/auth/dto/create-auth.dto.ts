@@ -44,12 +44,4 @@ export class CreateAuthDto {
     message: 'Nickname must be between 1 and 20 characters long',
   })
   nickname: string;
-
-  @ApiProperty({
-    description: 'The profile picture URL.',
-    type: String,
-  })
-  @IsOptional()
-  @IsUrl({}, { message: 'Profile picture must be a valid URL' })
-  pp: string;
 }

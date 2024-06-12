@@ -28,8 +28,27 @@ export class LobbyController {
   }
 
   @Get()
-  async findAll() {
-    return await this.lobbyService.findAll();
+  @UseGuards(AuthGuard)
+  async findAll(@Request() req, @Body() page: number) {
+    if (!page) page = 0;
+    return await this.lobbyService.findAllFromUser(req.user.data.sub, page);
+  }
+
+  @Get('present/:lobbyId')
+  @UseGuards(AuthGuard)
+  async present(@Param('lobbyId') lobbyId: string, @Request() req) {
+    return await this.lobbyService.present(lobbyId);
+  }
+
+  @Get('presents')
+  @UseGuards(AuthGuard)
+  async presents(@Request() req) {
+    return await this.lobbyService.presents(req.user.data.sub);
+  }
+
+  @Get(':lobbyId')
+  async findOne(@Param('lobbyId') lobbyId: string) {
+    return await this.lobbyService.findOne(lobbyId);
   }
 
   @Delete(':lobbyId')

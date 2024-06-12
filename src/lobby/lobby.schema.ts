@@ -45,6 +45,9 @@ export class Lobby {
 
   @Prop({ required: true, default: false })
   started: boolean;
+
+  @Prop({ required: true, default: false })
+  private: boolean;
 }
 
 export const LobbySchema = SchemaFactory.createForClass(Lobby);

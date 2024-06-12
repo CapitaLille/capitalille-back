@@ -5,23 +5,29 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { Mongoose } from 'mongoose';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LobbyModule } from './lobby/lobby.module';
 import { PlayerModule } from './player/player.module';
 import { MapModule } from './map/map.module';
 import { HouseModule } from './house/house.module';
 import { ServerModule } from './server/server.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FilesAzureService } from './fileazure/filesAzure.service';
+import { MailerService } from './mailer/mailer.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env.dev', '.env.prod'],
-      isGlobal: true,
-      cache: true,
+      isGlobal: true, // Make ConfigModule available globally
+      envFilePath: '.env', // Load from .env file
     }),
-    ScheduleModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGODB_URL),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGODB_URL'),
+      }),
+      inject: [ConfigService],
+    }),
     UserModule,
     AuthModule,
     LobbyModule,
@@ -31,6 +37,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     ServerModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, FilesAzureService, MailerService],
 })
 export class AppModule {}
