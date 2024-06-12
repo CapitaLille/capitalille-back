@@ -309,7 +309,7 @@ export class ServerService {
               // Pay rent
               await this.playerMoneyTransaction(
                 cost,
-                player,
+                player.id,
                 house.owner,
                 moneyTransactionType.RENT,
                 socket,

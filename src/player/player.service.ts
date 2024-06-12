@@ -24,6 +24,7 @@ import { ServerGateway, ServerGuardSocket } from 'src/server/server.gateway';
 import { Map } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
 import { Server } from 'socket.io';
+import { User } from 'src/user/user.schema';
 
 @Injectable()
 export class PlayerService {
@@ -31,9 +32,11 @@ export class PlayerService {
     @InjectModel('Player') private readonly playerModel: Model<Player>,
   ) {}
 
-  async create(userId: string, lobbyId: string): Promise<Doc<Player>> {
+  async create(user: Doc<User>, lobbyId: string): Promise<Doc<Player>> {
     const player = {
-      user: userId,
+      user: user.id,
+      nickname: user.nickname,
+      pp: user.pp,
       lobby: lobbyId,
     };
     return await this.playerModel.create(player);

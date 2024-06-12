@@ -48,7 +48,7 @@ export class LobbyService {
         users: users,
         map: createLobbyDto.map,
         turnSchedule: createLobbyDto.turnSchedule,
-        turnCount: 0,
+        turnCount: createLobbyDto.turnCountMax,
         turnCountMax: createLobbyDto.turnCountMax,
         startTime: new Date(),
         started: false,
@@ -63,14 +63,12 @@ export class LobbyService {
       }
 
       const operations = [];
-      await this.userService.findByIdAndUpdate(ownerId, {
+      const owner = await this.userService.findByIdAndUpdate(ownerId, {
         $push: { lobbies: newLobbyId },
       });
 
       // Créez le joueur du propriétaire.
-      operations.push(
-        this.playerService.create(ownerId, newLobbyId.toString()),
-      );
+      operations.push(this.playerService.create(owner, newLobbyId.toString()));
       for (let i = 0; i < createLobbyDto.users.length; i++) {
         // Envoyez une notification à chaque utilisateur.
         if (createLobbyDto.users[i] !== ownerId) {
@@ -137,7 +135,7 @@ export class LobbyService {
     try {
       session.startTransaction();
       user.lobbies.push(lobbyId);
-      const player = await this.playerService.create(userId, lobbyId);
+      const player = await this.playerService.create(user, lobbyId);
       await this.userService.findByIdAndUpdate(userId, {
         $push: { lobbies: lobbyId },
       });
@@ -174,7 +172,7 @@ export class LobbyService {
     try {
       session.startTransaction();
       user.lobbies.push(lobbyId);
-      await this.playerService.create(userId, lobbyId);
+      await this.playerService.create(user, lobbyId);
       await this.userService.update(userId, user);
 
       await session.commitTransaction();

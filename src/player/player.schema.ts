@@ -27,6 +27,10 @@ export class Player {
   actionPlayed: boolean;
   @Prop({ required: false, default: false })
   lost: boolean;
+  @Prop({ required: true })
+  nickname: string;
+  @Prop({ required: true })
+  pp: string;
 }
 
 export enum PlayerEvent {
