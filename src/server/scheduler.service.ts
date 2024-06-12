@@ -1,4 +1,10 @@
-import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  UseInterceptors,
+  forwardRef,
+} from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { Server } from 'socket.io';
@@ -202,7 +208,6 @@ export class SchedulerService {
       }
       if (house.state === houseState.OWNED && house.owner.length === 0) {
         // Fix house state if owner is empty
-        console.log('House state fixed.');
         await this.houseService.findByIdAndUpdate(
           house.id,
           {

@@ -1,7 +1,10 @@
 import {
   ForbiddenException,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ConnectedSocket,
@@ -43,6 +46,8 @@ import { CaseEventType, CaseType } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
 import { Achievement, AchievementType } from 'src/user/user.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
+import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
+import { ExecutionInterceptor } from './interceptor.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -55,6 +60,8 @@ export type ServerGuardSocket = Socket & {
 };
 
 @WebSocketGateway({ cors: true })
+@UseGuards(ServerGuard)
+@UseInterceptors(ExecutionInterceptor)
 export class ServerGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -69,6 +76,7 @@ export class ServerGateway
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
   @WebSocketServer() server: Server;
+  private runningCalls: { [playerId: string]: boolean } = {};
 
   afterInit(server: Server) {
     this.schedulerService.scheduleLobbies(server);
@@ -80,19 +88,16 @@ export class ServerGateway
     this.serverService.removeSocketId(undefined, client.id);
   }
 
-  @UseGuards(ServerGuard)
   @SubscribeMessage(PlayerEvent.SUBSCRIBE)
   async suscribe(
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
-    const roomDetails = this.server.sockets.adapter.rooms.get(data.lobbyId);
     console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOne(
       socket.handshake.user.sub,
       data.lobbyId,
     );
-    console.log('player found', player);
     if (!player) {
       console.log('create player');
       player = await this.lobbyService.joinLobby(
@@ -104,7 +109,6 @@ export class ServerGateway
     }
     this.serverService.setSocketId(player.id, socket.id);
     socket.join(data.lobbyId);
-    console.log(roomDetails);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
@@ -128,6 +132,7 @@ export class ServerGateway
     } catch (error) {
       socket.emit(GameEvent.UNSUBSCRIBE, { message: error.message });
     }
+    return;
   }
 
   @UseGuards(ServerGuard)
@@ -153,6 +158,8 @@ export class ServerGateway
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
     }
+
+    return;
   }
 
   getServer(): Server {

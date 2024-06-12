@@ -40,7 +40,6 @@ export class PlayerService {
       lobby: lobbyId,
     };
     const playerTmp = await this.playerModel.create(player);
-    console.log('CREATED PLAYER');
     return playerTmp;
   }
 
@@ -201,13 +200,6 @@ export class PlayerService {
           'Transaction amount must be positive and non-zero.',
         );
       }
-      console.log(
-        'generateTransactionRent',
-        fromPlayerId,
-        amount,
-        targetPlayerId,
-        type,
-      );
       // If the sender is the bank, we don't need to update the sender player.
       if (fromPlayerId !== Bank.id) {
         const player = await this.findOneById(fromPlayerId);

@@ -18,6 +18,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ConstantsService } from 'src/user/constants';
+import { ExecutionManagementService } from './execution.service';
 
 @Module({
   providers: [
@@ -33,6 +34,7 @@ import { ConstantsService } from 'src/user/constants';
     MapService,
     HouseService,
     FilesAzureService,
+    ExecutionManagementService,
   ],
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
