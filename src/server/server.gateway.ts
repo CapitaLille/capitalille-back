@@ -92,6 +92,7 @@ export class ServerGateway
       socket.handshake.user.sub,
       data.lobbyId,
     );
+    console.log('player found', player);
     if (!player) {
       player = await this.lobbyService.joinLobby(
         data.lobbyId,

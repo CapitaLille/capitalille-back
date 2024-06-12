@@ -115,7 +115,10 @@ export class LobbyService {
   ): Promise<Doc<Player>> {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userService.findOne(userId);
-
+    const player = await this.playerService.findOne(userId, lobbyId);
+    if (player) {
+      throw new ForbiddenException('Player already in lobby');
+    }
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -125,9 +128,6 @@ export class LobbyService {
     if (lobby.users.length >= lobby.maxPlayers) {
       throw new ForbiddenException('Lobby is full');
     }
-    if (user.lobbies.includes(lobbyId)) {
-      throw new ForbiddenException('User already in lobby');
-    }
     if (lobby.private && lobby.code !== code && !lobby.users.includes(userId)) {
       throw new ForbiddenException('Invalid code');
     }
@@ -136,9 +136,11 @@ export class LobbyService {
       session.startTransaction();
       user.lobbies.push(lobbyId);
       const player = await this.playerService.create(user, lobbyId);
-      await this.userService.findByIdAndUpdate(userId, {
-        $push: { lobbies: lobbyId },
-      });
+      if (!user.lobbies.includes(lobbyId)) {
+        await this.userService.findByIdAndUpdate(userId, {
+          $push: { lobbies: lobbyId },
+        });
+      }
       socket
         .in(lobbyId)
         .emit(GameEvent.NEW_USER, { user: user, player: player });
