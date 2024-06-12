@@ -154,40 +154,6 @@ export class LobbyService {
     }
   }
 
-  async addPlayer(lobbyId: string, userId: string) {
-    const lobby = await this.lobbyModel.findById(lobbyId);
-    const user = await this.userService.findOne(userId);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (!lobby) {
-      throw new NotFoundException('Lobby not found');
-    }
-    if (lobby.users.length >= lobby.maxPlayers) {
-      throw new ForbiddenException('Lobby is full');
-    }
-    if (user.lobbies.includes(lobbyId)) {
-      throw new ForbiddenException('User already in lobby');
-    }
-    const session = await this.connection.startSession();
-    try {
-      session.startTransaction();
-      user.lobbies.push(lobbyId);
-      await this.playerService.create(user, lobbyId);
-      await this.userService.update(userId, user);
-
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
-
-    return HttpStatus.ACCEPTED;
-  }
-
   async deleteLobby(lobbyId: string) {
     const session = await this.connection.startSession();
     try {

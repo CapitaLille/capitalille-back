@@ -94,6 +94,7 @@ export class ServerGateway
     );
     console.log('player found', player);
     if (!player) {
+      console.log('create player');
       player = await this.lobbyService.joinLobby(
         data.lobbyId,
         socket.handshake.user.sub,
@@ -154,24 +155,6 @@ export class ServerGateway
     }
   }
 
-  // @UseGuards(ServerGuard)
-  // @SubscribeMessage(PlayerEvent.JOIN_LOBBY)
-  // async joinLobby(
-  //   @ConnectedSocket() socket: ServerGuardSocket,
-  //   @MessageBody() data: { lobbyId: string; code: string },
-  // ) {
-  //   const userId = socket.handshake.user.sub;
-  //   try {
-  //     await this.lobbyService.joinLobby(
-  //       data.lobbyId,
-  //       userId,
-  //       socket,
-  //       data.code,
-  //     );
-  //   } catch (error) {
-  //     socket.emit(GameEvent.ERROR, { message: error.message });
-  //   }
-  // }
   getServer(): Server {
     return this.server;
   }

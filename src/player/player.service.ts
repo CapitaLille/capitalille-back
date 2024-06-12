@@ -39,7 +39,9 @@ export class PlayerService {
       pp: user.pp,
       lobby: lobbyId,
     };
-    return await this.playerModel.create(player);
+    const playerTmp = await this.playerModel.create(player);
+    console.log('CREATED PLAYER');
+    return playerTmp;
   }
 
   async findAll() {
