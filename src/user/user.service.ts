@@ -291,8 +291,9 @@ export class UserService {
     if (!(await this.userModel.findById(userId))) {
       throw new NotFoundException('User not found');
     }
-    await this.userModel.findByIdAndUpdate(userId, update);
-    return HttpStatus.OK;
+    return await this.userModel.findByIdAndUpdate(userId, update, {
+      new: true,
+    });
   }
 
   async statisticsUpdate(userId: string, achievement: Achievement) {
