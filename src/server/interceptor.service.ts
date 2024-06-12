@@ -17,14 +17,20 @@ export class ExecutionInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const socket = context.switchToWs().getClient();
     const playerId = socket?.handshake?.user?.sub;
-
+    // console.log(
+    //   'Intercepting ' + playerId + ' ' + JSON.parse(socket?.handshake?.query),
+    // );
     return new Observable((observer) => {
       const queueItem = {
         resolve: () => {
+          console.log('Resolving function' + playerId);
+          this.executionService.setIsExecuting(playerId, false);
           observer.next(undefined);
           observer.complete();
         },
         reject: (error: Error) => {
+          console.log('Rejecting function' + playerId);
+          this.executionService.setIsExecuting(playerId, true);
           observer.error(error);
         },
       };
