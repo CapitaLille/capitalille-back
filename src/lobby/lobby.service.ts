@@ -216,6 +216,7 @@ export class LobbyService {
     for (const lobby of lobbies) {
       const userIds = lobby.users;
       const users = await this.userService.findByIds(userIds, 3);
+      // if(!users) throw new NotFoundException('Users not found');
       const map = await this.mapService.findOne(lobby.map);
       const player = await this.playerService.findOne(userId, lobby.id);
       extendedLobbies.push({ lobby, users, map, player });

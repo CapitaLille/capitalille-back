@@ -49,13 +49,15 @@ export class ExecutionInterceptor implements NestInterceptor {
             const queueItem = this.executionService.dequeue(playerId);
             console.log('After execution ' + playerId);
             if (queueItem) {
-              console.log('Resolving last queue ' + playerId);
+              console.log('Resolving queue ' + playerId);
               queueItem.resolve();
             } else {
+              console.log('No more queue ' + playerId);
               this.executionService.setIsExecuting(playerId, false);
             }
           }),
           catchError((error) => {
+            console.log('Error in execution ' + playerId, error);
             const queueItem = this.executionService.dequeue(playerId);
             if (queueItem) {
               queueItem.reject(error);
