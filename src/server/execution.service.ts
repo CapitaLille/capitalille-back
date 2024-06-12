@@ -14,7 +14,7 @@ export class ExecutionManagementService {
       this.executionQueues[playerId] = [];
     }
     this.executionQueues[playerId].push({ resolve, reject });
-    console.log('Queue add, length : ', this.executionQueues[playerId].length);
+    console.log('Queue add, length : ', this.executionQueues[playerId]);
   }
 
   dequeue(playerId: string): QueueItem | undefined {
