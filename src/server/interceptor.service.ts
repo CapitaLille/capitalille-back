@@ -3,7 +3,6 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { Observable, from, throwError } from 'rxjs';
 import { tap, catchError, switchMap } from 'rxjs/operators';
@@ -17,9 +16,6 @@ export class ExecutionInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const socket = context.switchToWs().getClient();
     const playerId = socket?.handshake?.user?.sub;
-    // console.log(
-    //   'Intercepting ' + playerId + ' ' + JSON.parse(socket?.handshake?.query),
-    // );
     return new Observable((observer) => {
       const queueItem = {
         resolve: () => {

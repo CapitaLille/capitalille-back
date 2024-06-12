@@ -59,9 +59,17 @@ export class UserController {
     }
   }
 
+  @Get('achievements')
+  @UseGuards(AuthGuard)
+  async getAchievements(@Request() req) {
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.userService.getAchievements(req.user.data.sub);
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard)
   async findOneById(@Param('id') id: string) {
+    console.log('Finding user with id: ' + id);
     return await this.userService.findOne(id);
   }
 
@@ -84,13 +92,6 @@ export class UserController {
       achievements.achievements,
       achievements.level,
     );
-  }
-
-  @Get('achievements')
-  @UseGuards(AuthGuard)
-  async getAchievements(@Request() req) {
-    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-    return await this.userService.getAchievements(req.user.data.sub);
   }
 
   @Patch('pp')
