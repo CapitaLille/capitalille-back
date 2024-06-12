@@ -29,7 +29,7 @@ export class Player {
   lost: boolean;
   @Prop({ required: true })
   nickname: string;
-  @Prop({ required: true })
+  @Prop({ required: false, default: '' })
   pp: string;
 }
 
