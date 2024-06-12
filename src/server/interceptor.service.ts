@@ -56,18 +56,18 @@ export class ExecutionInterceptor implements NestInterceptor {
               this.executionService.setIsExecuting(playerId, false);
             }
           }),
-          catchError((error) => {
-            console.log('Error in execution ' + playerId, error);
-            const queueItem = this.executionService.dequeue(playerId);
-            if (queueItem) {
-              queueItem.reject(error);
-            } else {
-              this.executionService.setIsExecuting(playerId, false);
-            }
-            socket.emit(GameEvent.ERROR, { message: error.message });
-            return throwError(() => new Error(error.message));
-          }),
         );
+      }),
+      catchError((error) => {
+        console.log('Error in execution ' + playerId, error);
+        const queueItem = this.executionService.dequeue(playerId);
+        if (queueItem) {
+          queueItem.reject(error);
+        } else {
+          this.executionService.setIsExecuting(playerId, false);
+        }
+        socket.emit(GameEvent.ERROR, { message: error.message });
+        return throwError(() => new Error(error.message));
       }),
     );
   }
