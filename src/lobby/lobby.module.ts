@@ -15,10 +15,12 @@ import { PlayerModule } from 'src/player/player.module';
 import { UserModule } from 'src/user/user.module';
 import { HouseModule } from 'src/house/house.module';
 import { MapModule } from 'src/map/map.module';
+import { JwtService } from '@nestjs/jwt';
+import { ConstantsService } from 'src/user/constants';
 
 @Module({
   controllers: [LobbyController],
-  providers: [LobbyService],
+  providers: [LobbyService, JwtService, ConstantsService],
   imports: [
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
     MongooseModule.forFeature([{ name: 'Player', schema: PlayerSchema }]),
