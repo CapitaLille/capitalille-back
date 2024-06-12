@@ -8,10 +8,11 @@ import { ServerService } from 'src/server/server.service';
 import { ServerModule } from 'src/server/server.module';
 import { UserService } from 'src/user/user.service';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
+import { ConstantsService } from 'src/user/constants';
 
 @Module({
   controllers: [PlayerController],
-  providers: [PlayerService, UserService, FilesAzureService],
+  providers: [PlayerService, UserService, FilesAzureService, ConstantsService],
   imports: [
     MongooseModule.forFeature([{ name: 'Player', schema: PlayerSchema }]),
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),

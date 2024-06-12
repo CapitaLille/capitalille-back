@@ -1,10 +1,20 @@
-export const jwtConstants = {
-  secret: 'DDE$pcK:n2gEs6=cy1n=>S2)vB=bPmAB+)6yUbn+4C@DhTxZ9k[D9+up;JE+*ECS',
-};
+import { ConfigService } from '@nestjs/config';
 
-export const bcryptConstants = {
-  salt: 944306728059890274860243609840967490829430676598690248,
-};
+export class ConstantsService {
+  constructor(private configService: ConfigService) {}
+
+  get jwtConstants() {
+    return {
+      secret: this.configService.get<string>('JWT_SECRET'),
+    };
+  }
+
+  get bcryptConstants() {
+    return {
+      salt: this.configService.get<number>('BCRYPT_SALT'),
+    };
+  }
+}
 
 export const lobbyConstants = {
   starting: {

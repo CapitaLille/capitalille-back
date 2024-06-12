@@ -14,6 +14,7 @@ import { HouseService } from 'src/house/house.service';
 import { HouseModule } from 'src/house/house.module';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 import { ConfigService } from '@nestjs/config';
+import { ConstantsService } from './constants';
 
 @Module({
   controllers: [UserController],
@@ -22,6 +23,7 @@ import { ConfigService } from '@nestjs/config';
     LobbyService,
     UserService,
     FilesAzureService,
+    ConstantsService,
     ConfigService,
   ],
   imports: [
