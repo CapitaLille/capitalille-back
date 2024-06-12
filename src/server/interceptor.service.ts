@@ -30,7 +30,7 @@ export class ExecutionInterceptor implements NestInterceptor {
         },
         reject: (error: Error) => {
           console.log('Rejecting function' + playerId);
-          this.executionService.setIsExecuting(playerId, true);
+          this.executionService.setIsExecuting(playerId, false);
           observer.error(error);
         },
       };
