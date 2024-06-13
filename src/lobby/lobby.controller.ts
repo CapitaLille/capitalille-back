@@ -56,4 +56,10 @@ export class LobbyController {
   async remove(@Param('lobbyId') lobbyId: string) {
     return await this.lobbyService.deleteLobby(lobbyId);
   }
+
+  @Post('multiple')
+  @UseGuards(AuthGuard)
+  async findMultiple(@Body() data: { ids: string[] }) {
+    return await this.lobbyService.findMultiple(data.ids);
+  }
 }

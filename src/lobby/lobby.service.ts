@@ -156,6 +156,10 @@ export class LobbyService {
     }
   }
 
+  async findMultiple(ids: string[]) {
+    return await this.lobbyModel.find({ _id: { $in: ids } });
+  }
+
   async deleteLobby(lobbyId: string) {
     const session = await this.connection.startSession();
     try {

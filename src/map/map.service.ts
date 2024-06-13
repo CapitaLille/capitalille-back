@@ -1505,6 +1505,10 @@ export class MapService {
     return await this.mapModel.find();
   }
 
+  async findMultiple(mapIds: string[]) {
+    return await this.mapModel.find({ _id: { $in: mapIds } });
+  }
+
   /**
    * Get accessible cases from a player position for a specific map.
    * @param map

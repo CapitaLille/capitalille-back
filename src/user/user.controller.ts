@@ -66,6 +66,12 @@ export class UserController {
     return await this.userService.getAchievements(req.user.data.sub);
   }
 
+  @Post('multiple')
+  @UseGuards(AuthGuard)
+  async findMultiple(@Body() data: { ids: string[] }) {
+    return await this.userService.findMultiple(data.ids);
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard)
   async findOneById(@Param('id') id: string) {

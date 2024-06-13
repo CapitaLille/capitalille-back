@@ -41,6 +41,11 @@ export class UserService {
     return await this.userModel.findById(userId);
   }
 
+  async findMultiple(ids: string[]) {
+    console.log('ids : ', ids);
+    return await this.userModel.find({ _id: { $in: ids } });
+  }
+
   async searchUsers(search: string, page: number = 0) {
     console.log('no friends');
     if (page < 0) {

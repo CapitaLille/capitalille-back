@@ -39,4 +39,9 @@ export class MapController {
   findOne(@Param('id') mapId: string) {
     return this.mapService.findOne(mapId);
   }
+
+  @Post('multiple')
+  async findMultiple(@Body() data: { ids: string[] }) {
+    return await this.mapService.findMultiple(data.ids);
+  }
 }
