@@ -69,7 +69,49 @@ export class SchedulerService {
         this.nextTurnLobbyAction(lobby);
         this.scheduleNextTurnForLobby(lobbyId, socket);
       });
+    } else {
+      console.log('Lobby ended');
+      const leaderboard = await this.setLeaderboard(lobby);
+      this.lobbyService.findByIdAndUpdate(lobbyId, {
+        turnCount: 0,
+      });
     }
+  }
+
+  async setLeaderboard(lobby: Doc<Lobby>) {
+    const newLobby = await this.lobbyService.findOne(lobby.id);
+    const players = await this.playerService.findAllFromLobby(lobby.id);
+    const houses = await this.houseService.findAllFromLobby(lobby.id);
+    const leaderboard = [];
+    for (const player of players) {
+      this.userService.statisticsUpdate(player.user, AchievementType.playGame);
+      let housesValue = 0;
+      for (const houseIndex of player.houses) {
+        const house = houses.find((e) => {
+          return e.index === houseIndex;
+        });
+        for (let i = 0; i < house.level; i++) {
+          housesValue += house.price[i];
+        }
+      }
+      leaderboard.push({
+        playerId: player.id,
+        value: housesValue + player.money,
+        trophies: 0,
+      });
+    }
+    leaderboard.sort((a, b) => b.globalValue - a.globalValue);
+    const trophies = newLobby.users.length * 100;
+    for (let i = 0; i < leaderboard.length; i++) {
+      const multiplicator =
+        ((leaderboard.length - 1) / 2 - i) / (leaderboard.length - 1);
+      leaderboard[i].trophies = trophies * multiplicator;
+    }
+    const newLobby2 = await this.lobbyService.findByIdAndUpdate(lobby.id, {
+      $inc: { turnCount: -1 },
+      leaderboard: leaderboard,
+    });
+    return leaderboard;
   }
 
   async nextTurnLobbyAction(lobby: Doc<Lobby>) {
@@ -241,29 +283,7 @@ export class SchedulerService {
     });
 
     if (newLobby.turnCount === 0) {
-      const players = await this.playerService.findAllFromLobby(lobby.id);
-      const houses = await this.houseService.findAllFromLobby(lobby.id);
-      const leaderboard = [];
-      for (const player of players) {
-        this.userService.statisticsUpdate(
-          player.user,
-          AchievementType.playGame,
-        );
-        let housesValue = 0;
-        for (const houseIndex of player.houses) {
-          const house = houses.find((e) => {
-            return e.index === houseIndex;
-          });
-          for (let i = 0; i < house.level; i++) {
-            housesValue += house.price[i];
-          }
-        }
-        leaderboard.push({
-          playerId: player.id,
-          globalValue: housesValue + player.money,
-        });
-      }
-      leaderboard.sort((a, b) => b.globalValue - a.globalValue);
+      const leaderboard = await this.setLeaderboard(newLobby);
       socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
     }
   }

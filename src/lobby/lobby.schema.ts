@@ -48,6 +48,13 @@ export class Lobby {
 
   @Prop({ required: true, default: false })
   private: boolean;
+
+  @Prop({
+    required: true,
+    default: [],
+    type: [{ playerId: String, trophies: Number, value: Number }],
+  })
+  leaderboard: { playerId: string; trophies: number; value: number }[];
 }
 
 export const LobbySchema = SchemaFactory.createForClass(Lobby);

@@ -125,7 +125,10 @@ export class LobbyService {
     if (!lobby) {
       throw new NotFoundException('Lobby not found');
     }
-    if (lobby.users.length >= lobby.maxPlayers) {
+    if (
+      lobby.users.length >= lobby.maxPlayers &&
+      !lobby.users.includes(userId)
+    ) {
       throw new ForbiddenException('Lobby is full');
     }
     if (lobby.private && lobby.code !== code && !lobby.users.includes(userId)) {
@@ -134,7 +137,6 @@ export class LobbyService {
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
-      user.lobbies.push(lobbyId);
       const player = await this.playerService.create(user, lobbyId);
       if (!user.lobbies.includes(lobbyId)) {
         await this.userService.findByIdAndUpdate(userId, {
