@@ -165,7 +165,7 @@ export class SchedulerService {
     for (const house of houses) {
       if (house.state === houseState.SALE) {
         let auction = house.auction;
-        let promises = [];
+        const promises = [];
         if (house.auction === 0) {
           // Nobody make an auction. Selling to the bank.
           auction = house.price[house.level];
@@ -209,9 +209,9 @@ export class SchedulerService {
         await Promise.all(promises);
       }
       if (house.state === houseState.FREE) {
-        let auction = house.auction;
+        const auction = house.auction;
         if (house.nextOwner !== '') {
-          let promises = [];
+          const promises = [];
           promises.push(
             this.userService.statisticsUpdate(
               house.nextOwner,
@@ -255,6 +255,15 @@ export class SchedulerService {
           {
             state: houseState.FREE,
             auction: 0,
+          },
+          this.serverGateway.getServer(),
+        );
+      }
+      if (house.nextLevel !== house.level) {
+        await this.houseService.findByIdAndUpdate(
+          house.id,
+          {
+            level: house.nextLevel,
           },
           this.serverGateway.getServer(),
         );

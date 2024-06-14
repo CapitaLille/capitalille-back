@@ -35,6 +35,9 @@ export class House {
   @Prop({ required: false, default: 0 })
   level: 0 | 1 | 2 | 3; // 0: house 1, 1: house 2, 2: hostel 1, 3: hostel 2
 
+  @Prop({ required: false, default: 0 })
+  nextLevel: 0 | 1 | 2 | 3; // 0: house 1, 1: house 2, 2: hostel 1, 3: hostel 2
+
   @Prop({ required: false, default: houseState.FREE })
   state: houseState;
 

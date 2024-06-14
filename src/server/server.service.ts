@@ -130,6 +130,7 @@ export class ServerService {
       player: Doc<Player>,
       map: Doc<Map>,
     ) => Promise<void>,
+    checkEndGame: boolean = true,
   ) {
     const session = await this.connection.startSession();
     try {
@@ -137,6 +138,9 @@ export class ServerService {
       const lobby = await this.lobbyService.findOne(lobbyId);
       if (!lobby) {
         throw new NotFoundException('Lobby not found');
+      }
+      if (checkEndGame && lobby.turnCount === 0) {
+        throw new ForbiddenException('Game is over');
       }
       const player = await this.playerService.findOne(userId, lobbyId);
       if (!player) {
@@ -158,7 +162,7 @@ export class ServerService {
     } catch (error) {
       await session.abortTransaction();
       console.warn('Transaction failed: ' + error.message);
-      throw new ForbiddenException('Transaction failed: ' + error.message);
+      throw new ForbiddenException(error.message);
     } finally {
       session.endSession();
     }
@@ -728,6 +732,12 @@ export class ServerService {
       case PlayerEvent.REPAIR_HOUSE:
         await this.repairHouse(player, attachedId as number, map, socket);
         break;
+      case PlayerEvent.UPGRADE_HOUSE:
+        await this.upgradeHouse(player, attachedId as number, map, socket);
+        break;
+      case PlayerEvent.SELL_HOUSE:
+        await this.sellHouse(player, attachedId as number, map, socket);
+        break;
     }
   }
 
@@ -1127,6 +1137,81 @@ export class ServerService {
           fire: false,
           water: false,
         },
+      },
+      this.serverGateway.getServer(),
+    );
+  }
+
+  /**
+   * Upgrade a house.
+   * @param player
+   * @param houseIndex
+   * @param map
+   * @param socket
+   */
+  async upgradeHouse(
+    player: Doc<Player>,
+    houseIndex: number,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const house = await this.houseService.findOne(player.lobby, houseIndex);
+    if (house.level === 3) {
+      throw new ForbiddenException('La maison est déjà au niveau maximum.');
+    }
+    if (house.nextLevel && house.level !== house.nextLevel) {
+      throw new ForbiddenException(
+        'La maisons a déjà été améliorée pendant ce tour.',
+      );
+    }
+    if (player.money < house.price[house.level + 1]) {
+      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+      throw new ForbiddenException("Pas assez d'argent");
+    }
+    await this.playerMoneyTransaction(
+      house.price[house.level + 1],
+      player.id,
+      Bank.id,
+      moneyTransactionType.UPGRADE_HOUSE,
+      socket,
+      {
+        socketEmitSourcePlayer: true,
+        socketEmitTargetPlayer: true,
+        createTransactionDocument: true,
+        forceTransaction: false,
+      },
+    );
+    const newLevel = house.level + 1 > 3 ? 3 : house.level + 1;
+    await this.houseService.findByIdAndUpdate(
+      house.id,
+      {
+        nextLevel: newLevel,
+      },
+      this.serverGateway.getServer(),
+    );
+  }
+
+  /**
+   * Sell a house.
+   * @param player
+   * @param houseIndex
+   * @param map
+   * @param socket
+   */
+  async sellHouse(
+    player: Doc<Player>,
+    houseIndex: number,
+    map: Doc<Map>,
+    socket: ServerGuardSocket,
+  ) {
+    const house = await this.houseService.findOne(player.lobby, houseIndex);
+    if (house.state !== houseState.OWNED) {
+      throw new ForbiddenException('Vous ne pouvez pas vendre cette maison.');
+    }
+    await this.houseService.findByIdAndUpdate(
+      house.id,
+      {
+        state: houseState.SALE,
       },
       this.serverGateway.getServer(),
     );

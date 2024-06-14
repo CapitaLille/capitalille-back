@@ -128,6 +128,7 @@ export class ServerGateway
             player,
           });
         },
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.UNSUBSCRIBE, { message: error.message });
@@ -576,6 +577,80 @@ export class ServerGateway
             socket,
           );
           await socket.emit(GameEvent.HOUSE_REPAIR);
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.UPGRADE_HOUSE)
+  async upgradeHouse(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    console.log('upgradeHouse', data.lobbyId, socket.handshake.user.sub);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          if (house.owner !== player.id) {
+            throw new ForbiddenException(
+              "Vous n'êtes pas le propriétaire de cette maison.",
+            );
+          }
+          await this.serverService.playerAction(
+            PlayerEvent.UPGRADE_HOUSE,
+            data.houseIndex,
+            player.id,
+            socket,
+          );
+          await socket.emit(GameEvent.UPGRADE_HOUSE);
+        },
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.SELL_HOUSE)
+  async sellingHouse(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string; houseIndex: number },
+  ) {
+    console.log('sellHouse', data.lobbyId, socket.handshake.user.sub);
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const house = await this.houseService.findOne(
+            lobby.id,
+            data.houseIndex,
+          );
+          if (house.owner !== player.id) {
+            throw new ForbiddenException(
+              "Vous n'êtes pas le propriétaire de cette maison.",
+            );
+          }
+          await this.serverService.playerAction(
+            PlayerEvent.SELL_HOUSE,
+            data.houseIndex,
+            player.id,
+            socket,
+          );
+          await socket.emit(GameEvent.SELL_HOUSE);
         },
       );
     } catch (error) {

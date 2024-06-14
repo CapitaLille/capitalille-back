@@ -35,6 +35,8 @@ export class Player {
 
 export enum PlayerEvent {
   JOIN_LOBBY = 'joinLobby',
+  UPGRADE_HOUSE = 'upgradeHouse',
+  SELL_HOUSE = 'sellHouse',
   START_GAME = 'startGame',
   PLAY_TURN = 'playTurn',
   SUBSCRIBE = 'subscribe',
@@ -72,6 +74,7 @@ export enum moneyTransactionType {
   SELL = 'sell',
   LOAN = 'loan',
   LOAN_REPAY = 'loan_repay',
+  UPGRADE_HOUSE = 'upgrade_house',
   REPAIR = 'repair',
   BUS = 'bus',
   METRO = 'metro',
