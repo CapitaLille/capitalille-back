@@ -48,16 +48,24 @@ export class SchedulerService {
   async scheduleNextTurnForLobby(lobbyId: string, socket: Server) {
     const lobby = await this.lobbyService.findOne(lobbyId);
     const { id, startTime, turnSchedule, turnCount } = lobby;
+    if (turnCount === 0) {
+      console.log(
+        'Not launching scheduler for lobby',
+        id,
+        'because turnCount is 0',
+      );
+      return;
+    }
     const now = new Date();
     let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
-    for (let i = 0; i < turnCount; i++) {
-      const turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
-      if (turnTime > now) {
-        nextTurnIndex = i;
-        nextTurnTime = turnTime;
-        break;
-      }
+    let turnTime = new Date(startTime.getTime());
+    let i = 0;
+    while (turnTime < now) {
+      i++;
+      turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
+      nextTurnIndex = i;
+      nextTurnTime = turnTime;
     }
 
     if (nextTurnTime) {
