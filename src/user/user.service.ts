@@ -42,12 +42,10 @@ export class UserService {
   }
 
   async findMultiple(ids: string[]) {
-    console.log('ids : ', ids);
     return await this.userModel.find({ _id: { $in: ids } });
   }
 
   async searchUsers(search: string, page: number = 0) {
-    console.log('no friends');
     if (page < 0) {
       throw new ConflictException('Invalid page number');
     }
@@ -56,14 +54,12 @@ export class UserService {
     }
     if (page === 0) {
       if (search === '') {
-        console.log('empty seatch query');
         return await this.userModel.find().limit(10);
       }
       return await this.userModel
         .find({ nickname: { $regex: search } })
         .limit(10);
     }
-    console.log('search', search);
     if (search === '') {
       return await this.userModel
         .find()
@@ -77,7 +73,6 @@ export class UserService {
   }
 
   async searchFriends(userId: string, search: string, page: number = 0) {
-    console.log('friends true');
     if (page < 0) {
       throw new ConflictException('Invalid page number');
     }

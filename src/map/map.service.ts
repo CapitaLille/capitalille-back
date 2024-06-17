@@ -2,11 +2,54 @@ import { Injectable } from '@nestjs/common';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { CaseEvent, CaseEventType, CaseType, Map } from './map.schema';
+import {
+  CaseEvent,
+  CaseEventType,
+  CaseType,
+  Configuration,
+  Map,
+} from './map.schema';
 import mongoose, { Model } from 'mongoose';
 import { Doc } from 'src/server/server.type';
 import { Player } from 'src/player/player.schema';
+// interface Configuration {
+//   name: string;
+//   description: string;
+//   salary: number;
+//   ratingMultiplicator: [number, number];
+//   bank: { tax: number; value: number };
+//   maxPlayer: number;
+//   minPlayer: number;
+//   starting: {
+//     money: number;
+//     rating: number;
+//   };
+//   defectRate: {
+//     fire: number;
+//     water: number;
+//     electricity: number;
+//   };
 
+//   repairCost: number;
+
+//   casino: { value: number; chance: number };
+
+//   copsMalus: number;
+
+//   school: { cost: number; bonus: number };
+
+//   price: number;
+
+//   playerRange: number;
+
+//   metroPrice: number;
+
+//   busPrice: number;
+
+//   fraudChance: number;
+
+//   auctionStepPourcent: number; // 0 to 100
+// }
 @Injectable()
 export class MapService {
   constructor(@InjectModel('Map') private readonly mapModel: Model<Map>) {}
@@ -137,7 +180,8 @@ export class MapService {
           tail: [-12.362800598144531],
           last: [9],
           next: [11],
-          type: 'event',
+          type: 'metro',
+          nextStationCaseIndex: 27,
         },
         {
           name: 'Bone.011',
@@ -324,7 +368,8 @@ export class MapService {
           tail: [-51.362831115722656],
           last: [26],
           next: [28],
-          type: 'event',
+          nextStationCaseIndex: 10,
+          type: 'metro',
         },
         {
           name: 'Bone.076',
@@ -1451,12 +1496,12 @@ export class MapService {
         cases: map.houses[i].cases,
         name: names[i],
         price: [
-          10000 * i,
-          10000 * i + 10000,
-          10000 * i + 20000,
-          10000 * i + 30000,
+          100000 * i,
+          100000 * i + 100000,
+          100000 * i + 200000,
+          100000 * i + 300000,
         ],
-        rent: [1000 * i, 1000 * i + 1000, 1000 * i + 2000, 1000 * i + 3000],
+        rent: [25000 * i, 50000 * i, 75000 * i, 100000 * i],
       };
       houses.push(house);
     }
@@ -1479,20 +1524,32 @@ export class MapService {
       houses: houses,
       monuments: monuments,
       configuration: {
-        name: 'Default',
-        description: 'Default configuration',
-        salary: 200,
-        ratingMultiplicator: [0.8, 1.2],
-        bank: { tax: 0.1, value: 1000 },
-        diplomeBonus: 50000,
-        maxPlayer: 4,
+        name: 'Vieux Lille 2',
+        description: 'Vieux Lille 2',
+        salary: 20000,
+        ratingMultiplicator: [0.5, 1.5],
+        bank: { tax: 10, value: 2000000 },
+        maxPlayer: 6,
         minPlayer: 2,
-        starting: { money: 1000, rating: 1000 },
-        defectRate: { fire: 0.1, water: 0.1, electricity: 0.1 },
-        parkRatingBonus: 1,
-        price: 1000,
-        playerRange: 3,
-        auctionStepPourcent: 10,
+        starting: {
+          money: 2000000,
+          rating: 2.5,
+        },
+        defectRate: {
+          fire: 0.1,
+          water: 0.1,
+          electricity: 0.1,
+        },
+        repairCost: 100000,
+        casino: { value: 100000, chance: 0.5 },
+        copsMalus: 2,
+        school: { cost: 100000, bonus: 50000 },
+        price: 10,
+        playerRange: 2,
+        metroPrice: 100000,
+        busPrice: 50000,
+        fraudChance: 0.5,
+        auctionStepPourcent: 0.15,
       },
     });
   }

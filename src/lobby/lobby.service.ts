@@ -42,6 +42,7 @@ export class LobbyService {
       if (!users.includes(ownerId)) {
         users.push(ownerId);
       }
+      console.log('MAP', createLobbyDto.map);
       const newLobby = new this.lobbyModel({
         _id: newLobbyId,
         owner: ownerId,

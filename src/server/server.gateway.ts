@@ -99,7 +99,6 @@ export class ServerGateway
       data.lobbyId,
     );
     if (!player) {
-      console.log('create player');
       player = await this.lobbyService.joinLobby(
         data.lobbyId,
         socket.handshake.user.sub,
@@ -203,7 +202,7 @@ export class ServerGateway
             socket,
           );
           socket.emit(GameEvent.PLAY_TURN, {
-            diceBonuses: dice.diceBonuses,
+            dice,
             path,
             salary,
             action,
@@ -543,7 +542,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; houseIndex: number },
   ) {
-    console.log('repairHouse', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
@@ -590,7 +588,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; houseIndex: number },
   ) {
-    console.log('upgradeHouse', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
@@ -627,7 +624,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; houseIndex: number },
   ) {
-    console.log('sellHouse', data.lobbyId, socket.handshake.user.sub);
     const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
