@@ -278,6 +278,9 @@ export class ServerService {
       throw new NotFoundException('Player not found');
     }
     console.log(player.casePosition);
+    if (player.casePosition === -1) {
+      throw new NotFoundException('Player position corrupted');
+    }
     const type = map.cases[player.casePosition].type;
     try {
       switch (type) {
