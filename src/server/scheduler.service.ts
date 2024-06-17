@@ -48,11 +48,11 @@ export class SchedulerService {
   async scheduleNextTurnForLobby(lobbyId: string, socket: Server) {
     const lobby = await this.lobbyService.findOne(lobbyId);
     const { id, startTime, turnSchedule, turnCount } = lobby;
-    if (turnCount === 0) {
+    if (turnCount <= 0) {
       console.log(
         'Not launching scheduler for lobby',
         id,
-        'because turnCount is 0',
+        'because turnCount is ' + turnCount,
       );
       return;
     }
@@ -116,7 +116,7 @@ export class SchedulerService {
       leaderboard[i].trophies = trophies * multiplicator;
     }
     const newLobby2 = await this.lobbyService.findByIdAndUpdate(lobby.id, {
-      $inc: { turnCount: -1 },
+      turnCount: 0,
       leaderboard: leaderboard,
     });
     return leaderboard;

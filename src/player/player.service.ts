@@ -52,6 +52,8 @@ export class PlayerService {
   }
 
   async findOneById(playerId: string): Promise<Doc<Player>> {
+    const player = await this.playerModel.findById(playerId);
+
     return await this.playerModel.findById(playerId);
   }
 
