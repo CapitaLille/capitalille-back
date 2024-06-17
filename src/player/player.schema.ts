@@ -92,16 +92,16 @@ export enum ratingTransactionType {
 }
 
 export enum playerVaultType {
-  diceDouble,
-  diceDividedBy2,
-  dicePlus2,
-  diceMinus2,
-  forward3,
-  backward3,
-  loan,
-  diploma,
-  rentDiscount,
-  casino_temp,
+  diceDouble = 'diceDouble',
+  diceDividedBy2 = 'diceDividedBy2',
+  dicePlus2 = 'dicePlus2',
+  diceMinus2 = 'diceMinus2',
+  forward3 = 'forward3',
+  backward3 = 'backward3',
+  loan = 'loan',
+  diploma = 'diploma',
+  rentDiscount = 'rentDiscount',
+  casino_temp = 'casino_temp',
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);
