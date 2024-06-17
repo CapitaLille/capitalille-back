@@ -91,21 +91,27 @@ export class UserService {
     if (page !== 0) {
       if (search === '') {
         return await this.userModel
-          .find({ id: { $in: user.friends } })
+          .find({ friends: { $elemMatch: { $eq: userId } } })
           .limit(10);
       }
       return await this.userModel
-        .find({ nickname: { $regex: search }, id: { $in: user.friends } })
+        .find({
+          nickname: { $regex: search },
+          friends: { $elemMatch: { $eq: userId } },
+        })
         .limit(10);
     }
     if (search === '') {
       return await this.userModel
-        .find({ id: { $in: user.friends } })
+        .find({ friends: { $elemMatch: { $eq: userId } } })
         .limit(10)
         .skip(page * 10);
     }
     return await this.userModel
-      .find({ nickname: { $regex: search }, id: { $in: user.friends } })
+      .find({
+        nickname: { $regex: search },
+        friends: { $elemMatch: { $eq: userId } },
+      })
       .limit(10)
       .skip(page * 10);
   }

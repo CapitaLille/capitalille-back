@@ -56,6 +56,14 @@ export class SchedulerService {
       );
       return;
     }
+    if (!lobby.started) {
+      console.log(
+        'Not launching scheduler for lobby',
+        id,
+        'because lobby has not started',
+      );
+      return;
+    }
     const now = new Date();
     let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
