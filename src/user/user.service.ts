@@ -124,10 +124,18 @@ export class UserService {
       throw new NotFoundException('Friend not found');
     }
     if (id === friendId) {
-      throw new ConflictException('You cannot add yourself as a friend');
+      throw new BadRequestException('You cannot add yourself as a friend');
     }
     if (user.friends.includes(friendId) || friend.friends.includes(id)) {
-      throw new ConflictException('Friend already added');
+      throw new BadRequestException('Friend already added');
+    }
+    for (const notification of friend.notifications) {
+      if (
+        notification.from === user.id &&
+        notification.type === 'friendRequest'
+      ) {
+        throw new BadRequestException('Friend request already sent');
+      }
     }
     const notificationDto: CreatePushDto = {
       from: id,
@@ -149,15 +157,14 @@ export class UserService {
       throw new NotFoundException('Friend not found');
     }
     if (id === friendId) {
-      throw new ConflictException('You cannot add yourself as a friend');
+      throw new BadRequestException('You cannot add yourself as a friend');
     }
     if (user.friends.includes(friendId) || friend.friends.includes(id)) {
-      throw new ConflictException('Friend already added');
+      throw new BadRequestException('Friend already added');
     }
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
-
       const operations = [];
       operations.push(
         this.userModel.findByIdAndUpdate(user.id, {
@@ -170,7 +177,6 @@ export class UserService {
         }),
       );
       await Promise.all(operations);
-
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
