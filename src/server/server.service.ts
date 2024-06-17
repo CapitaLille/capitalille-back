@@ -191,7 +191,6 @@ export class ServerService {
     const path: extendedCase[] = [];
     const addToPath = (index: number, tmpCase: Case) => {
       tmpCase.linkedHouseIndex;
-
       path.push({
         coordinates: tmpCase.coordinates,
         next: tmpCase.next,
@@ -233,8 +232,9 @@ export class ServerService {
       }
     }
     // player.casePosition = map.cases.indexOf(path[path.length - 1]);
-    let newCasePos = map.cases.indexOf(path[path.length - 1]);
+    let newCasePos = path[path.length - 1].index;
     if (newCasePos === -1) {
+      console.warn('corrupted case position');
       newCasePos = 0;
     }
     const newPlayer = await this.playerService.findByIdAndUpdate(
