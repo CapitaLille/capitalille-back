@@ -49,19 +49,9 @@ export class SchedulerService {
     const lobby = await this.lobbyService.findOne(lobbyId);
     const { id, startTime, turnSchedule, turnCount } = lobby;
     if (turnCount <= 0) {
-      console.log(
-        'Not launching scheduler for lobby',
-        id,
-        'because turnCount is ' + turnCount,
-      );
       return;
     }
     if (!lobby.started) {
-      console.log(
-        'Not launching scheduler for lobby',
-        id,
-        'because lobby has not started',
-      );
       return;
     }
     const now = new Date();

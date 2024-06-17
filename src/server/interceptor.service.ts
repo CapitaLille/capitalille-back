@@ -19,27 +19,23 @@ export class ExecutionInterceptor implements NestInterceptor {
     return new Observable((observer) => {
       const queueItem = {
         resolve: () => {
-          console.log('Resolving function' + playerId);
           this.executionService.setIsExecuting(playerId, false);
           observer.next(undefined);
           observer.complete();
         },
         reject: (error: Error) => {
-          console.log('Rejecting function' + playerId);
           this.executionService.setIsExecuting(playerId, false);
           observer.error(error);
         },
       };
 
       if (this.executionService.isExecuting(playerId)) {
-        console.log('Adding to queue ' + playerId);
         this.executionService.addToQueue(
           playerId,
           queueItem.resolve,
           queueItem.reject,
         );
       } else {
-        console.log('Executing ' + playerId);
         this.executionService.setIsExecuting(playerId, true);
         observer.next(undefined);
         observer.complete();
@@ -49,19 +45,15 @@ export class ExecutionInterceptor implements NestInterceptor {
         return next.handle().pipe(
           tap(() => {
             const queueItem = this.executionService.dequeue(playerId);
-            console.log('After execution ' + playerId);
             if (queueItem) {
-              console.log('Resolving queue ' + playerId);
               queueItem.resolve();
             } else {
-              console.log('No more queue ' + playerId);
               this.executionService.setIsExecuting(playerId, false);
             }
           }),
         );
       }),
       catchError((error) => {
-        console.log('Error in execution ' + playerId, error);
         const queueItem = this.executionService.dequeue(playerId);
         if (queueItem) {
           queueItem.reject(error);

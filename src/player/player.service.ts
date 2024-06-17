@@ -79,7 +79,6 @@ export class PlayerService {
       if (!newPlayer) {
         throw new NotFoundException('Player not found.');
       }
-      console.log('Player updated : ', newPlayer.id);
       await server
         .in(newPlayer.lobby)
         .emit(GameEvent.PLAYER_UPDATE, { player: newPlayer });
@@ -136,15 +135,13 @@ export class PlayerService {
     Server: Server,
   ): {
     diceValue: number;
+    dices: number[];
     diceBonuses: playerVaultType[];
   } {
-    let dice =
-      Math.floor(Math.random() * 6) +
-      1 +
-      Math.floor(Math.random() * 6) +
-      1 +
-      Math.floor(Math.random() * 6) +
-      1;
+    let dice1 = Math.floor(Math.random() * 6) + 1;
+    let dice2 = Math.floor(Math.random() * 6) + 1;
+    let dice3 = Math.floor(Math.random() * 6) + 1;
+    let dice = dice1 + dice2 + dice3;
 
     const diceBonuses = player.bonuses.filter(
       (bonus) =>
@@ -178,7 +175,11 @@ export class PlayerService {
       },
       Server,
     );
-    return { diceValue: dice, diceBonuses: diceBonuses };
+    return {
+      dices: [dice1, dice2, dice3],
+      diceValue: dice,
+      diceBonuses: diceBonuses,
+    };
   }
 
   /**
