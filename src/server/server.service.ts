@@ -188,9 +188,21 @@ export class ServerService {
     interface extendedCase extends Case {
       index: number;
     }
-    const path: extendedCase[] = [
-      { ...map.cases[player.casePosition], index: player.casePosition },
-    ];
+    const path: extendedCase[] = [];
+    const addToPath = (index: number, tmpCase: Case) => {
+      tmpCase.linkedHouseIndex;
+
+      path.push({
+        coordinates: tmpCase.coordinates,
+        next: tmpCase.next,
+        last: tmpCase.last,
+        nextStationCaseIndex: tmpCase.nextStationCaseIndex,
+        linkedHouseIndex: tmpCase.linkedHouseIndex,
+        type: tmpCase.type,
+        index: index,
+      });
+    };
+    addToPath(player.casePosition, map.cases[player.casePosition]);
     let totalEarnThisTurn = 0;
     const playerSalary =
       this.playerService.ratingMultiplicator(player, map) *
@@ -206,26 +218,30 @@ export class ServerService {
           const direction = Math.round(Math.random());
           if (direction === 0) {
             const nextIndex = path[path.length - 1].next[0];
-            path.push({ ...map.cases[nextIndex], index: nextIndex });
+            addToPath(nextIndex, map.cases[nextIndex]);
           } else if (direction === 1) {
             const nextIndex = path[path.length - 1].next[1];
-            path.push({ ...map.cases[nextIndex], index: nextIndex });
+            addToPath(nextIndex, map.cases[nextIndex]);
           }
         } else {
           const nextIndex = path[path.length - 1].next[0];
-          path.push({ ...map.cases[nextIndex], index: nextIndex });
+          addToPath(nextIndex, map.cases[nextIndex]);
         }
       } else {
         const nextIndex = path[path.length - 1].next[0];
-        path.push({ ...map.cases[nextIndex], index: nextIndex });
+        addToPath(nextIndex, map.cases[nextIndex]);
       }
     }
     // player.casePosition = map.cases.indexOf(path[path.length - 1]);
+    const newCasePos = map.cases.indexOf(path[path.length - 1]);
+    if (newCasePos === -1) {
+      throw new NotFoundException('Case not found');
+    }
     const newPlayer = await this.playerService.findByIdAndUpdate(
       player.id,
       {
         turnPlayed: true,
-        casePosition: map.cases.indexOf(path[path.length - 1]),
+        casePosition: newCasePos,
       },
       this.serverGateway.getServer(),
     );
@@ -261,6 +277,7 @@ export class ServerService {
     if (!player) {
       throw new NotFoundException('Player not found');
     }
+    console.log(player.casePosition);
     const type = map.cases[player.casePosition].type;
     try {
       switch (type) {
