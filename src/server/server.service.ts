@@ -185,7 +185,12 @@ export class ServerService {
     salary: number;
     newPlayer: Doc<Player>;
   }> {
-    const path: Case[] = [map.cases[player.casePosition]];
+    interface extendedCase extends Case {
+      index: number;
+    }
+    const path: extendedCase[] = [
+      { ...map.cases[player.casePosition], index: player.casePosition },
+    ];
     let totalEarnThisTurn = 0;
     const playerSalary =
       this.playerService.ratingMultiplicator(player, map) *
@@ -201,18 +206,18 @@ export class ServerService {
           const direction = Math.round(Math.random());
           if (direction === 0) {
             const nextIndex = path[path.length - 1].next[0];
-            path.push(map.cases[nextIndex]);
+            path.push({ ...map.cases[nextIndex], index: nextIndex });
           } else if (direction === 1) {
             const nextIndex = path[path.length - 1].next[1];
-            path.push(map.cases[nextIndex]);
+            path.push({ ...map.cases[nextIndex], index: nextIndex });
           }
         } else {
           const nextIndex = path[path.length - 1].next[0];
-          path.push(map.cases[nextIndex]);
+          path.push({ ...map.cases[nextIndex], index: nextIndex });
         }
       } else {
         const nextIndex = path[path.length - 1].next[0];
-        path.push(map.cases[nextIndex]);
+        path.push({ ...map.cases[nextIndex], index: nextIndex });
       }
     }
     // player.casePosition = map.cases.indexOf(path[path.length - 1]);
