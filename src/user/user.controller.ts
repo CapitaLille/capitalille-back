@@ -49,10 +49,12 @@ export class UserController {
   async searchFriends(@Request() req, @Body() searchUserDto: SearchUserDto) {
     try {
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+      console.log(searchUserDto);
+      console.log("req :", req.user.data.sub);
       return await this.userService.searchFriends(
         req.user.data.sub,
         searchUserDto.search,
-        searchUserDto.page,
+        Number(searchUserDto.page),
       );
     } catch (e) {
       return new BadRequestException(e.message);
@@ -133,15 +135,15 @@ export class UserController {
   async answerNotification(
     @Request() req,
     @Param('notif_id') notifId: string,
-    answer: number,
+    @Body('answer') answer: number,
   ) {
-    if (![0, 1].includes(answer))
+    if (![0, 1].includes(Number(answer)))
       throw new BadRequestException('Invalid answer');
     if (!req.user.data.sub) throw new BadRequestException('No UID provided');
     return await this.userService.answerNotification(
       req.user.data.sub,
       notifId,
-      answer === 1 ? true : false,
+      Number(answer) === 1 ? true : false,
     );
   }
 }
