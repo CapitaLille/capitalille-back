@@ -233,9 +233,9 @@ export class ServerService {
       }
     }
     // player.casePosition = map.cases.indexOf(path[path.length - 1]);
-    const newCasePos = map.cases.indexOf(path[path.length - 1]);
+    let newCasePos = map.cases.indexOf(path[path.length - 1]);
     if (newCasePos === -1) {
-      throw new NotFoundException('Case not found');
+      newCasePos = 0;
     }
     const newPlayer = await this.playerService.findByIdAndUpdate(
       player.id,
