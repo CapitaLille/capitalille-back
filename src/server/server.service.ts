@@ -384,6 +384,7 @@ export class ServerService {
       started: true,
       startTime: new Date(),
     });
+    
     await this.serverGateway
       .getServer()
       .in(lobby.id)

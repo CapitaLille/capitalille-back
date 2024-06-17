@@ -203,7 +203,7 @@ export class ServerGateway
             socket,
           );
           socket.emit(GameEvent.PLAY_TURN, {
-            diceBonuses: dice.diceBonuses,
+            dice,
             path,
             salary,
             action,
