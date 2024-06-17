@@ -24,6 +24,7 @@ export class LobbyController {
   @Post()
   @UseGuards(AuthGuard)
   async create(@Body() createLobbyDto: CreateLobbyDto, @Request() req) {
+    console.log('Create lobby', createLobbyDto, req.user.data.sub);
     return await this.lobbyService.create(createLobbyDto, req.user.data.sub);
   }
 

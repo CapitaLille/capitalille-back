@@ -199,9 +199,8 @@ export class PlayerService {
   ) {
     try {
       if (amount <= 0) {
-        throw new ForbiddenException(
-          'Transaction amount must be positive and non-zero.',
-        );
+        console.warn('Cannot transfer negative or null amount of money.');
+        return;
       }
       // If the sender is the bank, we don't need to update the sender player.
       if (fromPlayerId !== Bank.id) {

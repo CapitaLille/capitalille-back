@@ -30,6 +30,7 @@ export class AuthService {
     const foundUser = await this.userModel.findOne({
       email: createAuthDto.email,
     });
+
     if (foundUser) {
       throw new BadRequestException('Mail already used');
     }
@@ -45,7 +46,9 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const foundUser = await this.userModel.findOne({ email: loginDto.email });
+    const foundUser = await this.userModel
+      .findOne({ email: loginDto.email })
+      .select('+password');
     if (!foundUser) {
       throw new NotFoundException('User not found');
     }

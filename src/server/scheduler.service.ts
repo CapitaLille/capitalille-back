@@ -76,7 +76,6 @@ export class SchedulerService {
         this.scheduleNextTurnForLobby(lobbyId, socket);
       });
     } else {
-      console.log('Lobby ended');
       const leaderboard = await this.setLeaderboard(lobby);
       this.lobbyService.findByIdAndUpdate(lobbyId, {
         turnCount: 0,
