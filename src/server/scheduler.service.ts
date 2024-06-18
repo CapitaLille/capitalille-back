@@ -45,6 +45,30 @@ export class SchedulerService {
     return HttpStatus.OK;
   }
 
+  async getDelay(lobbyId: string) {
+    const lobby = await this.lobbyService.findOne(lobbyId);
+    const { id, startTime, turnSchedule, turnCount } = lobby;
+    if (turnCount <= 0) {
+      return;
+    }
+    if (!lobby.started) {
+      return;
+    }
+    let now = new Date();
+    let nextTurnIndex: number = 0;
+    let nextTurnTime: Date | null = null;
+    let turnTime = new Date(startTime.getTime());
+    let i = 0;
+    while (turnTime < now) {
+      now = new Date();
+      i++;
+      turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
+      nextTurnIndex = i;
+      nextTurnTime = turnTime;
+    }
+    return new Date(nextTurnTime).getTime() - new Date().getTime();
+  }
+
   async scheduleNextTurnForLobby(lobbyId: string, socket: Server) {
     const lobby = await this.lobbyService.findOne(lobbyId);
     const { id, startTime, turnSchedule, turnCount } = lobby;
@@ -137,7 +161,9 @@ export class SchedulerService {
     if (lobby === undefined) {
       return;
     }
-    socket.in(lobby.id).emit(GameEvent.NEXT_TURN, { nextTurnTime });
+
+    const delay = new Date().getTime() - new Date(nextTurnTime).getTime();
+    socket.in(lobby.id).emit(GameEvent.NEXT_TURN, { delay });
 
     const map = await this.mapService.findOne(lobby.map);
     const players = await this.playerService.findAllFromLobby(lobby.id);

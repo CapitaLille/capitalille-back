@@ -118,6 +118,8 @@ export class ServerGateway
           const players = await this.playerService.findAllFromLobby(lobby.id);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
           const users = await this.userService.findByIds(lobby.users);
+          const delay = await this.schedulerService.getDelay(lobby.id);
+          socket.emit(GameEvent.NEXT_TURN, { delay });
           socket.emit(GameEvent.SUBSCRIBE, {
             lobby,
             houses,
