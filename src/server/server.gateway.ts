@@ -92,6 +92,7 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
+    console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOneByUserId(
       socket.handshake.user.sub,
       data.lobbyId,

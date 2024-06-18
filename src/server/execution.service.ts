@@ -13,6 +13,11 @@ export class ExecutionManagementService {
     if (!this.executionQueues[playerId]) {
       this.executionQueues[playerId] = [];
     }
+    console.log(
+      'Add to queue',
+      playerId,
+      this.executionQueues[playerId].length,
+    );
     this.executionQueues[playerId].push({ resolve, reject });
   }
 
@@ -23,6 +28,7 @@ export class ExecutionManagementService {
     ) {
       return undefined;
     }
+    console.log('Dequeue', playerId, this.executionQueues[playerId].length);
     return this.executionQueues[playerId].shift();
   }
 

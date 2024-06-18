@@ -16,6 +16,7 @@ export class ExecutionInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const socket = context.switchToWs().getClient();
     const playerId = socket?.handshake?.user?.sub;
+    console.log('Intercept', playerId);
     return new Observable((observer) => {
       const queueItem = {
         resolve: () => {
