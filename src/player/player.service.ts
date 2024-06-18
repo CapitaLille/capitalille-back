@@ -244,6 +244,7 @@ export class PlayerService {
                   amount: -amount,
                   playerId: targetPlayerId,
                   type,
+                  stack: 1,
                   date: new Date(),
                 },
               },
