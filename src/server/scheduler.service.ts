@@ -132,6 +132,7 @@ export class SchedulerService {
   }
 
   async nextTurnLobbyAction(lobby: Doc<Lobby>, nextTurnTime: Date) {
+    console.log('Next turn action execute ', lobby.id, new Date());
     const socket = this.serverGateway.getServer();
     if (lobby === undefined) {
       return;
