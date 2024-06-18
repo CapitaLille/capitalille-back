@@ -61,7 +61,7 @@ export type ServerGuardSocket = Socket & {
 
 @WebSocketGateway({ cors: true })
 @UseGuards(ServerGuard)
-@UseInterceptors(ExecutionInterceptor)
+// @UseInterceptors(ExecutionInterceptor)
 export class ServerGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
