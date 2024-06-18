@@ -196,7 +196,6 @@ export class ServerService {
   }> {
     const path: extendedCase[] = [];
     const addToPath = (index: number, tmpCase: Case) => {
-      tmpCase.linkedHouseIndex;
       path.push({
         coordinates: tmpCase.coordinates,
         next: tmpCase.next,

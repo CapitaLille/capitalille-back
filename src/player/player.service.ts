@@ -224,26 +224,28 @@ export class PlayerService {
         if (!player) {
           return undefined;
         }
-        const last = player.transactions[player.transactions.length - 1];
-        if (
-          type === moneyTransactionType.SALARY &&
-          last.type === moneyTransactionType.SALARY
-        ) {
-          const lastIndex = player.transactions.length - 1;
-          const updateQuery = {};
-          let lastTransaction = player.transactions[lastIndex];
-          lastTransaction.amount += amount;
-          if (!lastTransaction?.stack) {
-            lastTransaction.stack = 1;
+        if (player.transactions.length !== 0) {
+          const last = player.transactions[player.transactions.length - 1];
+          if (
+            type === moneyTransactionType.SALARY &&
+            last.type === moneyTransactionType.SALARY
+          ) {
+            const lastIndex = player.transactions.length - 1;
+            const updateQuery = {};
+            let lastTransaction = player.transactions[lastIndex];
+            lastTransaction.amount += amount;
+            if (!lastTransaction?.stack) {
+              lastTransaction.stack = 1;
+            }
+            lastTransaction.stack += 1;
+            updateQuery[`transactions.${lastIndex}`] = lastTransaction;
+            lastTransaction.playerId = Bank.id;
+            const updatedPlayer = await this.playerModel.findByIdAndUpdate(
+              player.id,
+              { $set: updateQuery },
+              { new: true },
+            );
           }
-          lastTransaction.stack += 1;
-          updateQuery[`transactions.${lastIndex}`] = lastTransaction;
-          lastTransaction.playerId = Bank.id;
-          const updatedPlayer = await this.playerModel.findByIdAndUpdate(
-            player.id,
-            { $set: updateQuery },
-            { new: true },
-          );
         } else {
           await this.findByIdAndUpdate(
             player.id,
@@ -265,30 +267,31 @@ export class PlayerService {
       // If the target is the bank, we don't need to update the target player.
       if (targetPlayerId !== Bank.id) {
         const player = await this.findOneById(targetPlayerId, '+transactions');
-
         if (!player) {
           return undefined;
         }
-        const last = player.transactions[player.transactions.length - 1];
-        if (
-          type === moneyTransactionType.SALARY &&
-          last.type === moneyTransactionType.SALARY
-        ) {
-          const lastIndex = player.transactions.length - 1;
-          const updateQuery = {};
-          let lastTransaction = player.transactions[lastIndex];
-          lastTransaction.amount += amount;
-          if (!lastTransaction?.stack) {
-            lastTransaction.stack = 1;
+        if (player.transactions.length !== 0) {
+          const last = player.transactions[player.transactions.length - 1];
+          if (
+            type === moneyTransactionType.SALARY &&
+            last.type === moneyTransactionType.SALARY
+          ) {
+            const lastIndex = player.transactions.length - 1;
+            const updateQuery = {};
+            let lastTransaction = player.transactions[lastIndex];
+            lastTransaction.amount += amount;
+            if (!lastTransaction?.stack) {
+              lastTransaction.stack = 1;
+            }
+            lastTransaction.stack += 1;
+            updateQuery[`transactions.${lastIndex}`] = lastTransaction;
+            lastTransaction.playerId = Bank.id;
+            const updatedPlayer = await this.playerModel.findByIdAndUpdate(
+              player.id,
+              { $set: updateQuery },
+              { new: true },
+            );
           }
-          lastTransaction.stack += 1;
-          updateQuery[`transactions.${lastIndex}`] = lastTransaction;
-          lastTransaction.playerId = Bank.id;
-          const updatedPlayer = await this.playerModel.findByIdAndUpdate(
-            player.id,
-            { $set: updateQuery },
-            { new: true },
-          );
         } else {
           await this.findByIdAndUpdate(
             player.id,
