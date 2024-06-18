@@ -73,7 +73,7 @@ export class SchedulerService {
     if (nextTurnTime) {
       const jobName = `lobby_${id}_next_turn_${nextTurnIndex}`;
       console.log(
-        `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toLocaleTimeString()}`,
+        `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toISOString()}`,
       );
       this.scheduleCronJob(jobName, nextTurnTime, () => {
         this.nextTurnLobbyAction(lobby, nextTurnTime2);
