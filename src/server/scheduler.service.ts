@@ -54,17 +54,21 @@ export class SchedulerService {
     if (!lobby.started) {
       return;
     }
-    const now = new Date();
+    let now = new Date();
     let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
     let turnTime = new Date(startTime.getTime());
     let i = 0;
     while (turnTime < now) {
+      now = new Date();
       i++;
       turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
       nextTurnIndex = i;
       nextTurnTime = turnTime;
     }
+    const nextTurnTime2 = new Date(
+      startTime.getTime() + (nextTurnIndex + 1) * turnSchedule * 1000,
+    );
 
     if (nextTurnTime) {
       const jobName = `lobby_${id}_next_turn_${nextTurnIndex}`;
@@ -72,14 +76,18 @@ export class SchedulerService {
         `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toLocaleTimeString()}`,
       );
       this.scheduleCronJob(jobName, nextTurnTime, () => {
-        this.nextTurnLobbyAction(lobby);
+        this.nextTurnLobbyAction(lobby, nextTurnTime2);
         this.scheduleNextTurnForLobby(lobbyId, socket);
       });
     } else {
       const leaderboard = await this.setLeaderboard(lobby);
-      this.lobbyService.findByIdAndUpdate(lobbyId, {
-        turnCount: 0,
-      });
+      this.lobbyService.findByIdAndUpdate(
+        lobbyId,
+        {
+          turnCount: 0,
+        },
+        this.serverGateway.getServer(),
+      );
     }
   }
 
@@ -112,20 +120,33 @@ export class SchedulerService {
         ((leaderboard.length - 1) / 2 - i) / (leaderboard.length - 1);
       leaderboard[i].trophies = trophies * multiplicator;
     }
-    const newLobby2 = await this.lobbyService.findByIdAndUpdate(lobby.id, {
-      turnCount: 0,
-      leaderboard: leaderboard,
-    });
+    const newLobby2 = await this.lobbyService.findByIdAndUpdate(
+      lobby.id,
+      {
+        turnCount: 0,
+        leaderboard: leaderboard,
+      },
+      this.serverGateway.getServer(),
+    );
     return leaderboard;
   }
 
-  async nextTurnLobbyAction(lobby: Doc<Lobby>) {
+  async nextTurnLobbyAction(lobby: Doc<Lobby>, nextTurnTime: Date) {
     const socket = this.serverGateway.getServer();
     if (lobby === undefined) {
       return;
     }
+    socket.in(lobby.id).emit(GameEvent.NEXT_TURN, { nextTurnTime });
+
     const map = await this.mapService.findOne(lobby.map);
     const players = await this.playerService.findAllFromLobby(lobby.id);
+    await this.lobbyService.findByIdAndUpdate(
+      lobby.id,
+      {
+        nextTurnTime: nextTurnTime,
+      },
+      this.serverGateway.getServer(),
+    );
 
     for (const player of players) {
       if (!player.lost) {
@@ -291,10 +312,16 @@ export class SchedulerService {
       }
     }
 
-    const newLobby = await this.lobbyService.findByIdAndUpdate(lobby.id, {
-      $inc: { turnCount: -1 },
-    });
-
+    let newLobby = await this.lobbyService.findOne(lobby.id);
+    if (lobby.turnCount > 0) {
+      newLobby = await this.lobbyService.findByIdAndUpdate(
+        lobby.id,
+        {
+          $inc: { turnCount: -1 },
+        },
+        this.serverGateway.getServer(),
+      );
+    }
     if (newLobby.turnCount === 0) {
       const leaderboard = await this.setLeaderboard(newLobby);
       socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });

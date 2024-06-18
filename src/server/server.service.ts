@@ -409,10 +409,14 @@ export class ServerService {
     if (lobby.started) {
       throw new ForbiddenException('Game already started');
     }
-    const newLobby = await this.lobbyService.findByIdAndUpdate(lobby.id, {
-      started: true,
-      startTime: new Date(),
-    });
+    const newLobby = await this.lobbyService.findByIdAndUpdate(
+      lobby.id,
+      {
+        started: true,
+        startTime: new Date(),
+      },
+      this.serverGateway.getServer(),
+    );
   }
 
   /**

@@ -55,6 +55,9 @@ export class Lobby {
     type: [{ playerId: String, trophies: Number, value: Number }],
   })
   leaderboard: { playerId: string; trophies: number; value: number }[];
+
+  @Prop({ required: false, default: new Date() })
+  nextTurnTime: Date;
 }
 
 export const LobbySchema = SchemaFactory.createForClass(Lobby);

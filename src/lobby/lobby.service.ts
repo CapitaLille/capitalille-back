@@ -264,10 +264,13 @@ export class LobbyService {
   async findByIdAndUpdate(
     lobbyId: string,
     update: mongoose.UpdateQuery<Lobby>,
+    server: Server,
   ) {
-    return await this.lobbyModel.findByIdAndUpdate(lobbyId, update, {
+    const lobby = await this.lobbyModel.findByIdAndUpdate(lobbyId, update, {
       new: true,
     });
+    server.to(lobbyId).emit(GameEvent.LOBBY_UPDATE, { lobby: lobby });
+    return lobby;
   }
 
   async findPrivate(code: string): Promise<Doc<Lobby> | undefined> {
