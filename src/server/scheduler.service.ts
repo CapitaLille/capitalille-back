@@ -330,6 +330,7 @@ export class SchedulerService {
 
   private scheduleCronJob(name: string, date: Date, callback: () => void) {
     const job = new CronJob(date, callback);
+    console.log('Job scheduled', name, date.toISOString());
     this.schedulerRegistry.addCronJob(name, job);
     job.start();
   }
