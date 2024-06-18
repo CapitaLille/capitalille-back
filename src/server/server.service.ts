@@ -135,6 +135,7 @@ export class ServerService {
       map: Doc<Map>,
     ) => Promise<void>,
     checkEndGame: boolean = true,
+    checkLost: boolean = true,
   ) {
     const session = await this.connection.startSession();
     try {
@@ -143,7 +144,7 @@ export class ServerService {
       if (!lobby) {
         throw new NotFoundException('Lobby not found');
       }
-      if (checkEndGame && lobby.turnCount === 0) {
+      if (checkEndGame && lobby.turnCount <= 0) {
         throw new ForbiddenException('Game is over');
       }
       const player = await this.playerService.findOneByUserId(
@@ -154,7 +155,7 @@ export class ServerService {
       if (!player) {
         throw new NotFoundException('Player not found');
       }
-      if (player.lost) {
+      if (player.lost && checkLost) {
         const targetSocketId = await this.getSocketId(player.user);
         socket
           .to(targetSocketId)

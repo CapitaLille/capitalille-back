@@ -128,6 +128,7 @@ export class ServerGateway
           });
         },
         false,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.UNSUBSCRIBE, { message: error.message });

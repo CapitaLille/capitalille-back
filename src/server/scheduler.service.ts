@@ -121,7 +121,6 @@ export class SchedulerService {
 
   async nextTurnLobbyAction(lobby: Doc<Lobby>) {
     const socket = this.serverGateway.getServer();
-    await socket.emit(GameEvent.ERROR, { message: 'Next turn action' });
     if (lobby === undefined) {
       return;
     }
