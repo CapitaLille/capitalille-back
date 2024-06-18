@@ -76,7 +76,6 @@ export class ServerGateway
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
   @WebSocketServer() server: Server;
-  private runningCalls: { [playerId: string]: boolean } = {};
 
   afterInit(server: Server) {
     this.schedulerService.scheduleLobbies(server);
@@ -93,7 +92,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
-    console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOneByUserId(
       socket.handshake.user.sub,
       data.lobbyId,
@@ -106,6 +104,7 @@ export class ServerGateway
         data.code,
       );
     }
+    console.log('subscribe', data.lobbyId, player.money);
     this.serverService.setSocketId(player.id, socket.id);
     socket.join(data.lobbyId);
     const userId = socket.handshake.user.sub;
@@ -154,6 +153,13 @@ export class ServerGateway
             throw new ForbiddenException('Only the owner can start the game');
           }
           await this.serverService.startGame(lobby, player, map, socket);
+          await this.schedulerService.scheduleNextTurnForLobby(
+            lobby.id,
+            this.getServer(),
+          );
+          await this.getServer()
+            .in(lobby.id)
+            .emit(GameEvent.START_GAME, { lobby: data.lobbyId });
         },
       );
     } catch (error) {

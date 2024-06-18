@@ -49,8 +49,6 @@ export class UserController {
   async searchFriends(@Request() req, @Body() searchUserDto: SearchUserDto) {
     try {
       if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-      console.log(searchUserDto);
-      console.log("req :", req.user.data.sub);
       return await this.userService.searchFriends(
         req.user.data.sub,
         searchUserDto.search,

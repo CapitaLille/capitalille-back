@@ -283,7 +283,6 @@ export class ServerService {
     if (!player) {
       throw new NotFoundException('Player not found');
     }
-    console.log(player.casePosition);
     if (player.casePosition === -1) {
       throw new NotFoundException('Player position corrupted');
     }
@@ -415,11 +414,6 @@ export class ServerService {
       started: true,
       startTime: new Date(),
     });
-
-    await this.serverGateway
-      .getServer()
-      .in(lobby.id)
-      .emit(GameEvent.START_GAME, { lobby: newLobby });
   }
 
   /**
