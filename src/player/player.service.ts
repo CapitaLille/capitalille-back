@@ -209,18 +209,10 @@ export class PlayerService {
           return undefined;
         }
         const last = player.transactions[player.transactions.length - 1];
-        if (player.transactions.length > 1000) {
-          console.log('Clearing transactions');
-          const updatedPlayer = await this.playerModel.findByIdAndUpdate(
-            player.id,
-            { $set: { transactions: [] } },
-            { new: true },
-          );
-        } else if (
+        if (
           type === moneyTransactionType.SALARY &&
           last.type === moneyTransactionType.SALARY
         ) {
-          console.log('Merging transactions');
           const lastIndex = player.transactions.length - 1;
           const updateQuery = {};
           let lastTransaction = player.transactions[lastIndex];
@@ -255,24 +247,46 @@ export class PlayerService {
       }
       // If the target is the bank, we don't need to update the target player.
       if (targetPlayerId !== Bank.id) {
-        const targetPlayer = await this.findOneById(targetPlayerId);
-        if (!targetPlayer) {
+        const player = await this.findOneById(targetPlayerId);
+        if (!player) {
           return undefined;
         }
-        await this.findByIdAndUpdate(
-          targetPlayer.id,
-          {
-            $push: {
-              transactions: {
-                amount: amount,
-                playerId: fromPlayerId,
-                type,
-                date: new Date(),
+        const last = player.transactions[player.transactions.length - 1];
+        if (
+          type === moneyTransactionType.SALARY &&
+          last.type === moneyTransactionType.SALARY
+        ) {
+          const lastIndex = player.transactions.length - 1;
+          const updateQuery = {};
+          let lastTransaction = player.transactions[lastIndex];
+          lastTransaction.amount += amount;
+          if (!lastTransaction?.stack) {
+            lastTransaction.stack = 1;
+          }
+          lastTransaction.stack += 1;
+          updateQuery[`transactions.${lastIndex}`] = lastTransaction;
+          const updatedPlayer = await this.playerModel.findByIdAndUpdate(
+            player.id,
+            { $set: updateQuery },
+            { new: true },
+          );
+        } else {
+          await this.findByIdAndUpdate(
+            player.id,
+            {
+              $push: {
+                transactions: {
+                  amount: amount,
+                  playerId: targetPlayerId,
+                  type,
+                  stack: 1,
+                  date: new Date(),
+                },
               },
             },
-          },
-          Server,
-        );
+            Server,
+          );
+        }
       }
     } catch (error) {
       console.error('playerGenerateTransaction : ' + error.message);
