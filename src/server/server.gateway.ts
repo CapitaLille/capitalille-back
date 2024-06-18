@@ -94,7 +94,7 @@ export class ServerGateway
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
     console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
-    let player = await this.playerService.findOne(
+    let player = await this.playerService.findOneByUserId(
       socket.handshake.user.sub,
       data.lobbyId,
     );
@@ -118,7 +118,6 @@ export class ServerGateway
           const players = await this.playerService.findAllFromLobby(lobby.id);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
           const users = await this.userService.findByIds(lobby.users);
-          console.log('subscribe response', lobby.id, player.id, map.id);
           socket.emit(GameEvent.SUBSCRIBE, {
             lobby,
             houses,
@@ -193,9 +192,6 @@ export class ServerGateway
           );
           const { path, salary, newPlayer } =
             await this.serverService.generatePath(dice.diceValue, map, player);
-          await socket.emit(GameEvent.PLAYER_UPDATE, {
-            player: newPlayer,
-          });
           const action = await this.serverService.mandatoryAction(
             map,
             newPlayer.id,

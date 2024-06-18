@@ -146,7 +146,11 @@ export class ServerService {
       if (checkEndGame && lobby.turnCount === 0) {
         throw new ForbiddenException('Game is over');
       }
-      const player = await this.playerService.findOne(userId, lobbyId);
+      const player = await this.playerService.findOneByUserId(
+        userId,
+        lobbyId,
+        '+transactions',
+      );
       if (!player) {
         throw new NotFoundException('Player not found');
       }
@@ -1106,7 +1110,10 @@ export class ServerService {
    * @param socket
    */
   async teleportPlayer(playerId: string, socket: ServerGuardSocket) {
-    const player = await this.playerService.findOneById(playerId);
+    const player = await this.playerService.findOneById(
+      playerId,
+      '+transactions',
+    );
     const lobby = await this.lobbyService.findOne(player.lobby);
     const map = await this.mapService.findOne(lobby.map);
     const targetCaseIndex = map.cases[player.casePosition].nextStationCaseIndex;
@@ -1118,7 +1125,6 @@ export class ServerService {
       this.serverGateway.getServer(),
     );
     const targetSocketId = await this.getSocketId(player.id);
-    await socket.to(targetSocketId).emit(GameEvent.PLAYER_UPDATE, { player });
     await this.userService.statisticsUpdate(
       player.user,
       AchievementType.teleport,

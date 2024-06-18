@@ -47,14 +47,29 @@ export class PlayerService {
     return await this.playerModel.find();
   }
 
-  async findOne(userId: string, lobbyId: string) {
-    return await this.playerModel.findOne({ user: userId, lobby: lobbyId });
+  async findOneByUserId(
+    userId: string,
+    lobbyId: string,
+    key: string = undefined,
+  ) {
+    if (key) {
+      return await this.playerModel
+        .findOne({ user: userId, lobby: lobbyId })
+        .select(key);
+    } else {
+      return await this.playerModel.findOne({ user: userId, lobby: lobbyId });
+    }
   }
 
-  async findOneById(playerId: string): Promise<Doc<Player>> {
-    const player = await this.playerModel.findById(playerId);
-
-    return await this.playerModel.findById(playerId);
+  async findOneById(
+    playerId: string,
+    key: string = undefined,
+  ): Promise<Doc<Player>> {
+    if (key) {
+      return await this.playerModel.findById(playerId).select(key);
+    } else {
+      return await this.playerModel.findById(playerId);
+    }
   }
 
   async findAllFromLobby(lobbyId: string) {
@@ -71,11 +86,9 @@ export class PlayerService {
     server: Server,
   ) {
     try {
-      const newPlayer = await this.playerModel.findByIdAndUpdate(
-        playerId,
-        update,
-        { new: true },
-      );
+      const newPlayer = await this.playerModel
+        .findByIdAndUpdate(playerId, update, { new: true })
+        .select('+transactions');
       if (!newPlayer) {
         throw new NotFoundException('Player not found.');
       }
@@ -204,7 +217,10 @@ export class PlayerService {
       }
       // If the sender is the bank, we don't need to update the sender player.
       if (fromPlayerId !== Bank.id) {
-        const player = await this.findOneById(fromPlayerId);
+        const player = await this.playerModel.findById(
+          fromPlayerId,
+          '+transactions',
+        );
         if (!player) {
           return undefined;
         }
@@ -222,6 +238,7 @@ export class PlayerService {
           }
           lastTransaction.stack += 1;
           updateQuery[`transactions.${lastIndex}`] = lastTransaction;
+          lastTransaction.playerId = Bank.id;
           const updatedPlayer = await this.playerModel.findByIdAndUpdate(
             player.id,
             { $set: updateQuery },
@@ -247,7 +264,8 @@ export class PlayerService {
       }
       // If the target is the bank, we don't need to update the target player.
       if (targetPlayerId !== Bank.id) {
-        const player = await this.findOneById(targetPlayerId);
+        const player = await this.findOneById(targetPlayerId, '+transactions');
+
         if (!player) {
           return undefined;
         }
@@ -265,6 +283,7 @@ export class PlayerService {
           }
           lastTransaction.stack += 1;
           updateQuery[`transactions.${lastIndex}`] = lastTransaction;
+          lastTransaction.playerId = Bank.id;
           const updatedPlayer = await this.playerModel.findByIdAndUpdate(
             player.id,
             { $set: updateQuery },

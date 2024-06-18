@@ -19,7 +19,7 @@ export class Player {
   casePosition: number;
   @Prop({ required: false, default: [] })
   bonuses: playerVaultType[];
-  @Prop({ required: false, default: [] })
+  @Prop({ required: false, default: [], select: false })
   transactions: Transaction[];
   @Prop({ required: false, default: false })
   turnPlayed: boolean;

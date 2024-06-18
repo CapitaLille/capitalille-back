@@ -42,7 +42,6 @@ export class LobbyService {
       if (!users.includes(ownerId)) {
         users.push(ownerId);
       }
-      console.log('MAP', createLobbyDto.map);
       const newLobby = new this.lobbyModel({
         _id: newLobbyId,
         owner: ownerId,
@@ -116,7 +115,7 @@ export class LobbyService {
   ): Promise<Doc<Player>> {
     const lobby = await this.lobbyModel.findById(lobbyId);
     const user = await this.userService.findOne(userId);
-    const player = await this.playerService.findOne(userId, lobbyId);
+    const player = await this.playerService.findOneByUserId(userId, lobbyId);
     if (player) {
       throw new ForbiddenException('Player already in lobby');
     }
@@ -225,7 +224,7 @@ export class LobbyService {
       const users = await this.userService.findByIds(userIds, 3);
       // if(!users) throw new NotFoundException('Users not found');
       const map = await this.mapService.findOne(lobby.map);
-      const player = await this.playerService.findOne(userId, lobby.id);
+      const player = await this.playerService.findOneByUserId(userId, lobby.id);
       extendedLobbies.push({ lobby, users, map, player });
     }
     return extendedLobbies;
