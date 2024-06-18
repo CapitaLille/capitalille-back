@@ -52,6 +52,10 @@ import {
   AchievementType,
 } from 'src/user/user.schema';
 
+export interface extendedCase extends Case {
+  index: number;
+}
+
 @Injectable()
 /**
  * Service class that handles server-related operations.
@@ -181,13 +185,10 @@ export class ServerService {
     map: Doc<Map>,
     player: Doc<Player>,
   ): Promise<{
-    path: Case[];
+    path: extendedCase[];
     salary: number;
     newPlayer: Doc<Player>;
   }> {
-    interface extendedCase extends Case {
-      index: number;
-    }
     const path: extendedCase[] = [];
     const addToPath = (index: number, tmpCase: Case) => {
       tmpCase.linkedHouseIndex;

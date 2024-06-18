@@ -118,6 +118,7 @@ export class ServerGateway
           const players = await this.playerService.findAllFromLobby(lobby.id);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
           const users = await this.userService.findByIds(lobby.users);
+          console.log('subscribe response', lobby.id, player.id, map.id);
           socket.emit(GameEvent.SUBSCRIBE, {
             lobby,
             houses,

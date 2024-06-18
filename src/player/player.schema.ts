@@ -64,6 +64,8 @@ export class Transaction {
   type: moneyTransactionType | ratingTransactionType;
   @Prop({ required: true, default: new Date() })
   date: Date;
+  @Prop({ required: false, default: 0 })
+  stack: number;
 }
 
 export enum moneyTransactionType {
