@@ -143,14 +143,14 @@ export class PlayerService {
    * @param player
    * @returns The dice roll.
    */
-  generateDice(
+  async generateDice(
     player: Doc<Player>,
     Server: Server,
-  ): {
+  ): Promise<{
     diceValue: number;
     dices: number[];
     diceBonuses: playerVaultType[];
-  } {
+  }> {
     const dice1 = Math.floor(Math.random() * 6) + 1;
     const dice2 = Math.floor(Math.random() * 6) + 1;
     const dice3 = Math.floor(Math.random() * 6) + 1;
@@ -163,7 +163,15 @@ export class PlayerService {
         bonus === playerVaultType.diceMinus2 ||
         bonus === playerVaultType.dicePlus2,
     );
+    const otherBonuses = player.bonuses.filter(
+      (bonus) =>
+        bonus !== playerVaultType.diceDouble &&
+        bonus !== playerVaultType.diceDividedBy2 &&
+        bonus !== playerVaultType.diceMinus2 &&
+        bonus !== playerVaultType.dicePlus2,
+    );
     for (const bonus of diceBonuses) {
+      player.bonuses.splice(player.bonuses.indexOf(bonus), 1);
       switch (bonus) {
         case playerVaultType.diceDouble:
           dice *= 2;
@@ -181,13 +189,15 @@ export class PlayerService {
       dice = Math.round(dice);
       if (dice < 0) dice = 0;
     }
-    this.playerModel.findByIdAndUpdate(
+    console.log('Dice : ' + otherBonuses);
+    const newPlayer = await this.playerModel.findByIdAndUpdate(
       player.id,
       {
-        $pull: { bonuses: { $in: diceBonuses } },
+        bonuses: otherBonuses,
       },
       Server,
     );
+    console.log('new:', newPlayer.bonuses);
     return {
       dices: [dice1, dice2, dice3],
       diceValue: dice,

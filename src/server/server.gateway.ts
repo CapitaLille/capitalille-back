@@ -131,6 +131,7 @@ export class ServerGateway
         },
         false,
         false,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.UNSUBSCRIBE, { message: error.message });
@@ -164,6 +165,9 @@ export class ServerGateway
             .in(lobby.id)
             .emit(GameEvent.START_GAME, { lobby: data.lobbyId });
         },
+        true,
+        true,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
@@ -196,7 +200,7 @@ export class ServerGateway
             userId,
             AchievementType.diceLauncher,
           );
-          const dice = this.playerService.generateDice(
+          const dice = await this.playerService.generateDice(
             player,
             this.getServer(),
           );
@@ -215,6 +219,9 @@ export class ServerGateway
             action,
           });
         },
+        true,
+        true,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
@@ -583,6 +590,9 @@ export class ServerGateway
           );
           await socket.emit(GameEvent.HOUSE_REPAIR);
         },
+        true,
+        true,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
@@ -655,6 +665,9 @@ export class ServerGateway
           );
           await socket.emit(GameEvent.SELL_HOUSE);
         },
+        true,
+        true,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });

@@ -136,6 +136,7 @@ export class ServerService {
     ) => Promise<void>,
     checkEndGame: boolean = true,
     checkLost: boolean = true,
+    checkTurnPlayed: boolean = true,
   ) {
     const session = await this.connection.startSession();
     try {
@@ -154,6 +155,9 @@ export class ServerService {
       );
       if (!player) {
         throw new NotFoundException('Player not found');
+      }
+      if (!player.turnPlayed && checkTurnPlayed) {
+        throw new ForbiddenException('Player has not played his turn');
       }
       if (player.lost && checkLost) {
         const targetSocketId = await this.getSocketId(player.user);
@@ -682,14 +686,6 @@ export class ServerService {
     const lobby = await this.lobbyService.findOne(player.lobby);
     const map = await this.mapService.findOne(lobby.map);
 
-    if (!player.turnPlayed) {
-      throw new ForbiddenException('You need to play your turn first.');
-    }
-    if (player.lost) {
-      throw new ForbiddenException(
-        "You can't play anymore because you lost the game.",
-      );
-    }
     switch (caseEventType) {
       case PlayerEvent.CASINO_GAMBLE:
         await this.casinoGamble(player, map, socket);

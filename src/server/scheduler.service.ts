@@ -168,7 +168,7 @@ export class SchedulerService {
     for (const player of players) {
       if (!player.lost) {
         if (player.turnPlayed === false) {
-          const dice = this.playerService.generateDice(
+          const dice = await this.playerService.generateDice(
             player,
             this.serverGateway.getServer(),
           );
