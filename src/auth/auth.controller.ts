@@ -1,4 +1,10 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginDto } from './dto/login.dto';
@@ -32,7 +38,7 @@ export class AuthController {
   async requestPasswordReset(@Body('email') email: string) {
     const user = await this.userService.findOneByEmail(email);
     if (!user) {
-      throw new BadRequestException('User not found');
+      return new BadRequestException('User not found');
     }
 
     const token = await this.authService.generateResetPasswordToken(user);
@@ -49,7 +55,7 @@ export class AuthController {
       const email = payload.email;
       await this.userService.updateUserPassword(email, newPassword);
     } catch (e) {
-      throw new BadRequestException(e.message);
+      return new UnauthorizedException(e.message);
     }
   }
 }
