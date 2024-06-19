@@ -55,6 +55,7 @@ export class SchedulerService {
       return 0;
     }
     let now = new Date();
+    let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
     let turnTime = new Date(startTime.getTime());
     let i = 0;
@@ -62,6 +63,7 @@ export class SchedulerService {
       now = new Date();
       i++;
       turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
+      nextTurnIndex = i;
       nextTurnTime = turnTime;
     }
     return new Date(nextTurnTime).getTime() - new Date().getTime();
@@ -88,17 +90,17 @@ export class SchedulerService {
       nextTurnIndex = i;
       nextTurnTime = turnTime;
     }
-    const nextTurnTime2 = new Date(
-      startTime.getTime() + (nextTurnIndex + 1) * turnSchedule * 1000,
-    );
 
     if (nextTurnTime) {
       const jobName = `lobby_${id}_next_turn_${nextTurnIndex}`;
       console.log(
         `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toISOString()}`,
       );
+      socket.in(lobby.id).emit(GameEvent.NEXT_TURN, {
+        delay: nextTurnTime.getTime() - new Date().getTime(),
+      });
       this.scheduleCronJob(jobName, nextTurnTime, () => {
-        this.nextTurnLobbyAction(lobby, nextTurnTime2);
+        this.nextTurnLobbyAction(lobby);
         this.scheduleNextTurnForLobby(lobbyId, socket);
       });
     } else {
@@ -153,7 +155,7 @@ export class SchedulerService {
     return leaderboard;
   }
 
-  async nextTurnLobbyAction(lobby: Doc<Lobby>, nextTurnTime: Date) {
+  async nextTurnLobbyAction(lobby: Doc<Lobby>) {
     console.log('Next turn action execute ', lobby.id, new Date());
     const socket = this.serverGateway.getServer();
     if (lobby === undefined) {
@@ -162,13 +164,6 @@ export class SchedulerService {
 
     const map = await this.mapService.findOne(lobby.map);
     const players = await this.playerService.findAllFromLobby(lobby.id);
-    await this.lobbyService.findByIdAndUpdate(
-      lobby.id,
-      {
-        nextTurnTime: nextTurnTime,
-      },
-      this.serverGateway.getServer(),
-    );
 
     for (const player of players) {
       if (!player.lost) {
