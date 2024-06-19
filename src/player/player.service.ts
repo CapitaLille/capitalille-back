@@ -151,9 +151,9 @@ export class PlayerService {
     dices: number[];
     diceBonuses: playerVaultType[];
   } {
-    let dice1 = Math.floor(Math.random() * 6) + 1;
-    let dice2 = Math.floor(Math.random() * 6) + 1;
-    let dice3 = Math.floor(Math.random() * 6) + 1;
+    const dice1 = Math.floor(Math.random() * 6) + 1;
+    const dice2 = Math.floor(Math.random() * 6) + 1;
+    const dice3 = Math.floor(Math.random() * 6) + 1;
     let dice = dice1 + dice2 + dice3;
 
     const diceBonuses = player.bonuses.filter(
@@ -184,7 +184,7 @@ export class PlayerService {
     this.playerModel.findByIdAndUpdate(
       player.id,
       {
-        $pull: { bonuses: { $in: [diceBonuses] } },
+        $pull: { bonuses: { $in: diceBonuses } },
       },
       Server,
     );
@@ -232,7 +232,7 @@ export class PlayerService {
           ) {
             const lastIndex = player.transactions.length - 1;
             const updateQuery = {};
-            let lastTransaction = player.transactions[lastIndex];
+            const lastTransaction = player.transactions[lastIndex];
             lastTransaction.amount += amount;
             if (!lastTransaction?.stack) {
               lastTransaction.stack = 1;
@@ -278,7 +278,7 @@ export class PlayerService {
           ) {
             const lastIndex = player.transactions.length - 1;
             const updateQuery = {};
-            let lastTransaction = player.transactions[lastIndex];
+            const lastTransaction = player.transactions[lastIndex];
             lastTransaction.amount += amount;
             if (!lastTransaction?.stack) {
               lastTransaction.stack = 1;
