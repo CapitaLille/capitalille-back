@@ -13,7 +13,10 @@ import { HouseService } from 'src/house/house.service';
 import { Lobby } from 'src/lobby/lobby.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
 import { MapService } from 'src/map/map.service';
-import { moneyTransactionType } from 'src/player/player.schema';
+import {
+  moneyTransactionType,
+  playerVaultType,
+} from 'src/player/player.schema';
 import { PlayerService } from 'src/player/player.service';
 import { ServerService } from 'src/server/server.service';
 import { Doc, Bank, GameEvent } from 'src/server/server.type';
@@ -197,6 +200,7 @@ export class SchedulerService {
           {
             turnPlayed: false,
             actionPlayed: false,
+            bonuses: { $pull: { $in: [playerVaultType.casino_temp] } },
           },
           this.serverGateway.getServer(),
         );
@@ -206,16 +210,16 @@ export class SchedulerService {
     const houses = await this.houseService.findAllFromLobby(lobby.id);
     for (const house of houses) {
       if (house.state === houseState.SALE) {
-        let auction = house.auction;
+        const auction =
+          house.auction === 0 ? house.price[house.level] : house.auction;
+        const owner = house.owner;
+        const nextOwner = house.nextOwner;
         const promises = [];
-        if (house.auction === 0) {
-          // Nobody make an auction. Selling to the bank.
-          auction = house.price[house.level];
-        }
-        if (house.nextOwner !== '') {
+
+        if (nextOwner !== '') {
           promises.push(
             this.userService.statisticsUpdate(
-              house.nextOwner,
+              nextOwner,
               AchievementType.auctionWinner,
             ),
           );
@@ -223,8 +227,8 @@ export class SchedulerService {
         promises.push(
           this.serverService.playerMoneyTransaction(
             auction,
-            house.owner !== '' ? house.owner : Bank.id,
-            house.nextOwner !== '' ? house.nextOwner : Bank.id,
+            nextOwner !== '' ? nextOwner : Bank.id,
+            owner !== '' ? owner : Bank.id,
             moneyTransactionType.HOUSE_TRANSACTION,
             socket,
             {
@@ -239,11 +243,10 @@ export class SchedulerService {
           this.houseService.findByIdAndUpdate(
             house.id,
             {
-              owner: house.nextOwner,
+              owner: nextOwner,
               nextOwner: '',
               auction: 0,
-              state:
-                house.nextOwner !== '' ? houseState.OWNED : houseState.FREE,
+              state: nextOwner !== '' ? houseState.OWNED : houseState.FREE,
             },
             this.serverGateway.getServer(),
           ),
@@ -251,20 +254,24 @@ export class SchedulerService {
         await Promise.all(promises);
       }
       if (house.state === houseState.FREE) {
-        const auction = house.auction;
-        if (house.nextOwner !== '') {
-          const promises = [];
+        const auction =
+          house.auction === 0 ? house.price[house.level] : house.auction;
+        const owner = house.owner;
+        const nextOwner = house.nextOwner;
+        const promises = [];
+
+        if (nextOwner !== '') {
           promises.push(
             this.userService.statisticsUpdate(
-              house.nextOwner,
+              nextOwner,
               AchievementType.auctionWinner,
             ),
           );
           promises.push(
             this.serverService.playerMoneyTransaction(
               auction,
-              house.owner !== '' ? house.owner : Bank.id,
-              house.nextOwner !== '' ? house.nextOwner : Bank.id,
+              nextOwner !== '' ? nextOwner : Bank.id,
+              owner !== '' ? owner : Bank.id,
               moneyTransactionType.HOUSE_TRANSACTION,
               socket,
               {
@@ -279,7 +286,7 @@ export class SchedulerService {
             this.houseService.findByIdAndUpdate(
               house.id,
               {
-                owner: house.nextOwner,
+                owner: nextOwner,
                 nextOwner: '',
                 auction: 0,
                 state: houseState.OWNED,
@@ -318,6 +325,7 @@ export class SchedulerService {
           player.id,
           {
             money: 0,
+            houses: [],
             lost: true,
           },
           this.serverGateway.getServer(),
