@@ -225,9 +225,7 @@ export class LobbyService {
       const userIds = lobby.users;
       promises.push(await this.userService.findByIds(userIds, 3));
       promises.push(await this.mapService.findOne(lobby.map));
-      promises.push(
-        await this.playerService.findOneByUserId(userId, lobby._id),
-      );
+      promises.push(await this.playerService.findOneByUserId(userId, lobby.id));
       const [users, map, player] = await Promise.all(promises);
       extendedLobbies.push({ lobby, map, users, player });
     }
