@@ -154,27 +154,28 @@ export class ServerService {
         '+transactions',
       );
       if (!player) {
-        throw new NotFoundException('Player not found');
+        throw new NotFoundException("Votre joueur n'a pas été trouvé");
       }
-      if (!player.turnPlayed && checkTurnPlayed) {
-        throw new ForbiddenException('Player has not played his turn');
+      if (player.turnPlayed && checkTurnPlayed) {
+        throw new ForbiddenException('Vous avez déjà joué ce tour');
       }
       if (player.lost && checkLost) {
         const targetSocketId = await this.getSocketId(player.user);
         socket
           .to(targetSocketId)
           .emit(GameEvent.LOST_GAME, { message: 'You lost' });
-        throw new ForbiddenException('Player has lost');
+        throw new ForbiddenException('Vous avez perdu la partie');
       }
       const map = await this.mapService.findOne(lobby.map);
       if (!map) {
-        throw new NotFoundException('Map not found');
+        throw new NotFoundException("La carte n'a pas été trouvée");
       }
       await run(lobby, player, map);
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
       console.warn('Transaction failed: ' + error.message);
+      socket.emit(GameEvent.ERROR, { message: error.message });
       throw new ForbiddenException(error.message);
     } finally {
       session.endSession();

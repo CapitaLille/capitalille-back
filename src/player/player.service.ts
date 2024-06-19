@@ -189,7 +189,6 @@ export class PlayerService {
       dice = Math.round(dice);
       if (dice < 0) dice = 0;
     }
-    console.log('Dice : ' + otherBonuses);
     const newPlayer = await this.playerModel.findByIdAndUpdate(
       player.id,
       {
@@ -197,7 +196,6 @@ export class PlayerService {
       },
       Server,
     );
-    console.log('new:', newPlayer.bonuses);
     return {
       dices: [dice1, dice2, dice3],
       diceValue: dice,

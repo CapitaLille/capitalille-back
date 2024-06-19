@@ -159,7 +159,6 @@ export class SchedulerService {
   }
 
   async nextTurnLobbyAction(lobby: Doc<Lobby>) {
-    console.log('Next turn action execute ', lobby.id, new Date());
     const socket = this.serverGateway.getServer();
     if (lobby === undefined) {
       return;
@@ -355,7 +354,6 @@ export class SchedulerService {
 
   private scheduleCronJob(name: string, date: Date, callback: () => void) {
     const job = new CronJob(date, callback);
-    console.log('Job scheduled', name, date.toISOString());
     this.schedulerRegistry.addCronJob(name, job);
     job.start();
   }

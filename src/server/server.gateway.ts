@@ -154,7 +154,9 @@ export class ServerGateway
         socket,
         async (lobby, player, map) => {
           if (lobby.owner !== userId) {
-            throw new ForbiddenException('Only the owner can start the game');
+            throw new ForbiddenException(
+              "Il n'y a que le propriétaire qui peut lancer la partie",
+            );
           }
           await this.serverService.startGame(lobby, player, map, socket);
           await this.schedulerService.scheduleNextTurnForLobby(
@@ -193,9 +195,6 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          if (player.turnPlayed) {
-            throw new ForbiddenException('Player already played his turn');
-          }
           this.userService.statisticsUpdate(
             userId,
             AchievementType.diceLauncher,
@@ -219,9 +218,6 @@ export class ServerGateway
             action,
           });
         },
-        true,
-        true,
-        false,
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });

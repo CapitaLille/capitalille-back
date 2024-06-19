@@ -117,22 +117,22 @@ export class LobbyService {
     const user = await this.userService.findOne(userId);
     const player = await this.playerService.findOneByUserId(userId, lobbyId);
     if (player) {
-      throw new ForbiddenException('Player already in lobby');
+      throw new ForbiddenException('Votre joueur est déjà dans le lobby');
     }
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Utilisateur non trouvé');
     }
     if (!lobby) {
-      throw new NotFoundException('Lobby not found');
+      throw new NotFoundException('Lobby non trouvé');
     }
     if (
       lobby.users.length >= lobby.maxPlayers &&
       !lobby.users.includes(userId)
     ) {
-      throw new ForbiddenException('Lobby is full');
+      throw new ForbiddenException('Lobby complet');
     }
     if (lobby.private && lobby.code !== code && !lobby.users.includes(userId)) {
-      throw new ForbiddenException('Invalid code');
+      throw new ForbiddenException('Code de lobby incorrect');
     }
     const session = await this.connection.startSession();
     try {
@@ -220,12 +220,12 @@ export class LobbyService {
     const lobbies = await this.lobbyModel.find({ _id: { $in: ids } });
     const extendedLobbies = [];
     for (const lobby of lobbies) {
+      const promises = [];
       const userIds = lobby.users;
-      const users = await this.userService.findByIds(userIds, 3);
-      // if(!users) throw new NotFoundException('Users not found');
-      const map = await this.mapService.findOne(lobby.map);
-      const player = await this.playerService.findOneByUserId(userId, lobby.id);
-      extendedLobbies.push({ lobby, users, map, player });
+      promises.push(await this.userService.findByIds(userIds, 3));
+      promises.push(await this.mapService.findOne(lobby.map));
+      const [users, map] = await Promise.all(promises);
+      extendedLobbies.push({ lobby, map, users });
     }
     return extendedLobbies;
   }
