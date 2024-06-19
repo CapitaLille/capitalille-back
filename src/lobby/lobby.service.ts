@@ -47,6 +47,7 @@ export class LobbyService {
         owner: ownerId,
         users: users,
         map: createLobbyDto.map,
+        private: true,
         turnSchedule: createLobbyDto.turnSchedule,
         turnCount: createLobbyDto.turnCountMax,
         turnCountMax: createLobbyDto.turnCountMax,
@@ -224,8 +225,11 @@ export class LobbyService {
       const userIds = lobby.users;
       promises.push(await this.userService.findByIds(userIds, 3));
       promises.push(await this.mapService.findOne(lobby.map));
-      const [users, map] = await Promise.all(promises);
-      extendedLobbies.push({ lobby, map, users });
+      promises.push(
+        await this.playerService.findOneByUserId(userId, lobby._id),
+      );
+      const [users, map, player] = await Promise.all(promises);
+      extendedLobbies.push({ lobby, map, users, player });
     }
     return extendedLobbies;
   }
