@@ -108,13 +108,7 @@ export class SchedulerService {
       });
     } else {
       const leaderboard = await this.setLeaderboard(lobby);
-      this.lobbyService.findByIdAndUpdate(
-        lobbyId,
-        {
-          turnCount: 0,
-        },
-        this.serverGateway.getServer(),
-      );
+      socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
     }
   }
 
@@ -147,6 +141,25 @@ export class SchedulerService {
         ((leaderboard.length - 1) / 2 - i) / (leaderboard.length - 1);
       leaderboard[i].trophies = trophies * multiplicator;
     }
+    for (const player of players) {
+      const user = await this.userService.findOne(player.user);
+      const userTrophies =
+        user.trophies +
+        leaderboard.find((e) => e.playerId === player.id).trophies;
+      if (userTrophies >= 0) {
+        await this.userService.findByIdAndUpdate(player.user, {
+          $inc: {
+            trophies: leaderboard.find((e) => e.playerId === player.id)
+              .trophies,
+          },
+        });
+      } else {
+        await this.userService.findByIdAndUpdate(player.user, {
+          trophies: 0,
+        });
+      }
+    }
+
     const newLobby2 = await this.lobbyService.findByIdAndUpdate(
       lobby.id,
       {
