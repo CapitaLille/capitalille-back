@@ -156,8 +156,10 @@ export class ServerService {
       if (!player) {
         throw new NotFoundException("Votre joueur n'a pas été trouvé");
       }
-      if (player.turnPlayed && checkTurnPlayed) {
-        throw new ForbiddenException('Vous avez déjà joué ce tour');
+      if (!player.turnPlayed && checkTurnPlayed) {
+        throw new ForbiddenException(
+          "Vous devez jouer avant d'effectuer cette action",
+        );
       }
       if (player.lost && checkLost) {
         const targetSocketId = await this.getSocketId(player.user);
