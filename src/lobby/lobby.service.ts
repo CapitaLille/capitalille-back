@@ -146,7 +146,7 @@ export class LobbyService {
       }
       socket
         .in(lobbyId)
-        .emit(GameEvent.NEW_USER, { user: user, player: player });
+        .emit(GameEvent.NEW_PLAYER, { user: user, player: player });
       await session.commitTransaction();
       return player;
     } catch (error) {

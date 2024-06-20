@@ -35,7 +35,7 @@ export enum GameEvent {
   PLAY_TURN = 'playTurn', // Return player's diceBonuses, path, salary and last case gameEvent.
   PLAYER_UPDATE = 'playerUpdate',
   LOBBY_UPDATE = 'lobbyUpdate',
-  NEW_USER = 'userJoin',
+  NEW_PLAYER = 'newPlayer',
   MONEY_CHANGE = 'moneyChange',
   HOUSE_REPAIR = 'houseRepair',
   RATING_CHANGE = 'ratingChange',
