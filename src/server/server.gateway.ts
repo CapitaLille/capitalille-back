@@ -195,6 +195,9 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
+          if (player.turnPlayed) {
+            throw new ForbiddenException('Vous avez déjà joué votre tour');
+          }
           this.userService.statisticsUpdate(
             userId,
             AchievementType.diceLauncher,
@@ -438,9 +441,6 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          if (map.cases[player.casePosition].type !== CaseType.MONUMENTS) {
-            throw new ForbiddenException('Player is not on a monuments case');
-          }
           await this.serverService.playerAction(
             PlayerEvent.MONUMENTS_PAY,
             undefined,
@@ -667,6 +667,41 @@ export class ServerGateway
         true,
         true,
         false,
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.MONUMENTS_PAY)
+  async requestMonument(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const monument = map.monuments.find((monument) => {
+            monument.cases.includes(player.casePosition);
+          });
+          if (!monument) {
+            throw new ForbiddenException(
+              "Vous n'êtes pas sur une case monument.",
+            );
+          }
+          await this.serverService.playerAction(
+            PlayerEvent.MONUMENTS_PAY,
+            undefined,
+            player.id,
+            socket,
+          );
+          await socket.emit(GameEvent.MONUMENTS_PAID);
+        },
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });

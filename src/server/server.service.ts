@@ -945,9 +945,12 @@ export class ServerService {
         return true;
       }
     });
+    if (!monument) {
+      throw new NotFoundException("Vous n'êtes pas sur un monument");
+    }
     if (player.money < monument.price) {
       socket.emit(GameEvent.NOT_ENOUGH_MONEY);
-      throw new ForbiddenException('Not enough money');
+      throw new ForbiddenException("Vous n'avez pas assez d'argent");
     }
     await this.playerMoneyTransaction(
       monument.price,

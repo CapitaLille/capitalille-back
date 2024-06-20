@@ -58,6 +58,7 @@ export enum GameEvent {
   METRO_REQUEST = 'metroRequest', // Request to take the metro or pass.
   BUS_REQUEST = 'busRequest', // Request to take the bus or pass.
   MONUMENTS_REQUEST = 'monumentsRequest', // Request to visit the monuments or pass.
+  MONUMENTS_PAID = 'monuments', // Monuments visited. Pay the monuments.
   COPS_REQUEST = 'copsRequest', // Request to pay the cops or pass.
   SCHOOL_REQUEST = 'schoolRequest', // Request to pay the school or pass.
 }
