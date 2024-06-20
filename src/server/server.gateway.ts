@@ -218,6 +218,9 @@ export class ServerGateway
             action,
           });
         },
+        true,
+        true,
+        false,
       );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
