@@ -391,7 +391,7 @@ export class ServerService {
           return GameEvent.COPS_REQUEST;
         case CaseType.SCHOOL:
           return GameEvent.SCHOOL_REQUEST;
-        case CaseType.default:
+        case CaseType.INTERSECTION:
           await this.playerService.findByIdAndUpdate(
             player.id,
             {
@@ -401,6 +401,18 @@ export class ServerService {
             this.serverGateway.getServer(),
           );
           return GameEvent.UNHANDLED_EVENT;
+        case CaseType.START:
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              turnPlayed: true,
+              actionPlayed: true,
+            },
+            this.serverGateway.getServer(),
+          );
+          return GameEvent.UNHANDLED_EVENT;
+        default:
+          throw new NotImplementedException('Case type not implemented');
       }
     } catch (error) {
       throw new NotImplementedException('mandatoryAction : ' + error.message);

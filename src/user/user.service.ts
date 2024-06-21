@@ -38,7 +38,12 @@ export class UserService {
     if (!userId) {
       throw new BadRequestException('userId not defined in findOne user.');
     }
-    return await this.userModel.findById(userId);
+    const user = await this.userModel.findById(userId);
+    console.log('user', user);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
   async findMultiple(ids: string[]) {
