@@ -311,6 +311,18 @@ export class SchedulerService {
           );
         }
         promises.push(
+          await this.serverService.playerMoneyTransaction(
+            auction,
+            Bank.id,
+            owner,
+            moneyTransactionType.HOUSE_TRANSACTION,
+            {
+              createTransactionDocument: false,
+              forceTransaction: true,
+            },
+          ),
+        );
+        promises.push(
           this.playerService.generateTransaction(
             owner,
             nextOwner !== '' ? nextOwner : Bank.id,

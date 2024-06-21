@@ -773,7 +773,7 @@ export class ServerService {
           map.houses[houseIndex].cases.join(','),
       );
     }
-    if (house.state !== 'free' && house.state !== 'sale') {
+    if (house.state !== houseState.SALE && house.state !== houseState.FREE) {
       socket.emit(GameEvent.ERROR, {
         message: 'House is not for sale',
       });
