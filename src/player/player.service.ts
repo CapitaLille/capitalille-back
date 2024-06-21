@@ -235,7 +235,7 @@ export class PlayerService {
         const fromTransaction = this.createTransaction(
           fromPlayerId,
           targetPlayerId,
-          amount,
+          -amount,
           type,
           Server,
         );
@@ -244,7 +244,7 @@ export class PlayerService {
         const toTransaction = this.createTransaction(
           targetPlayerId,
           fromPlayerId,
-          -amount,
+          amount,
           type,
           Server,
         );
