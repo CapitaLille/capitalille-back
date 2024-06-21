@@ -321,8 +321,8 @@ export class SchedulerService {
         );
         promises.push(
           this.playerService.generateTransaction(
-            Bank.id,
             nextOwner,
+            Bank.id,
             auction,
             moneyTransactionType.HOUSE_TRANSACTION,
             this.serverGateway.getServer(),
