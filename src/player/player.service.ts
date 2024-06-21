@@ -258,7 +258,8 @@ export class PlayerService {
   }
 
   async changePp(userId: string, pp: string) {
-    this.playerModel.updateMany({ user: userId }, { pp: pp });
+    console.log('changePp', userId, pp);
+    await this.playerModel.updateMany({ user: userId }, { pp: pp });
   }
 
   /**
@@ -281,6 +282,7 @@ export class PlayerService {
     );
     const transactions = player.transactions;
     if (
+      transactions.length > 0 &&
       transactions[transactions.length - 1].type ===
         moneyTransactionType.SALARY &&
       type === moneyTransactionType.SALARY
