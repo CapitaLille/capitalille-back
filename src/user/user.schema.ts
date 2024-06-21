@@ -6,6 +6,7 @@ export type UserDocument = HydratedDocument<User>;
 
 export enum AchievementType {
   thiefLeague = 'thiefLeague',
+  youngLeague = 'youngLeague',
   mafiaLeague = 'mafiaLeague',
   annuitantLeague = 'annuitantLeague',
   studentLeague = 'studentLeague',
@@ -64,6 +65,10 @@ export class Achievement {
     level: [AchievementLevel.zero],
   });
   static studentLeague = new AchievementClass({
+    name: AchievementType.studentLeague,
+    level: [AchievementLevel.zero],
+  });
+  static youngLeague = new AchievementClass({
     name: AchievementType.studentLeague,
     level: [AchievementLevel.zero],
   });

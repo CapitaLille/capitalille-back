@@ -1,11 +1,4 @@
-import {
-  ForbiddenException,
-  HttpCode,
-  HttpStatus,
-  NotFoundException,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { ForbiddenException, UseGuards } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -15,39 +8,23 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  WsException,
-  WsResponse,
 } from '@nestjs/websockets';
 import { ServerGuard } from './server.guard';
 import { Socket } from 'socket.io';
 import { Server } from 'socket.io';
-import {
-  AuctionData,
-  Bank,
-  GameError,
-  GameEvent,
-  GameResponse,
-} from './server.type';
-import e from 'express';
+import { GameEvent } from './server.type';
 import { HouseService } from 'src/house/house.service';
 import { PlayerService } from 'src/player/player.service';
 import { MapService } from 'src/map/map.service';
 import { InjectConnection } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { ServerService } from './server.service';
-import {
-  PlayerEvent,
-  moneyTransactionType,
-  playerVaultType,
-} from 'src/player/player.schema';
-import { ScheduleModule } from '@nestjs/schedule';
+import { PlayerEvent, playerVaultType } from 'src/player/player.schema';
 import { SchedulerService } from './scheduler.service';
-import { CaseEventType, CaseType } from 'src/map/map.schema';
+import { CaseType } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
-import { Achievement, AchievementType } from 'src/user/user.schema';
+import { AchievementType } from 'src/user/user.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
-import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
-import { ExecutionInterceptor } from './interceptor.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -79,6 +56,8 @@ export class ServerGateway
 
   afterInit(server: Server) {
     this.schedulerService.scheduleLobbies(server);
+    this.schedulerService.launchPublicLobbies();
+    console.warn('Comment this line to enable scheduler');
   }
 
   handleConnection(client: any, ...args: any[]) {}
@@ -92,7 +71,6 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
-    console.log('subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOneByUserId(
       socket.handshake.user.sub,
       data.lobbyId,
@@ -105,7 +83,6 @@ export class ServerGateway
         data.code,
       );
     }
-    console.log('subscribe', data.lobbyId, player.money);
     this.serverService.setSocketId(player.id, socket.id);
     socket.join(data.lobbyId);
     const userId = socket.handshake.user.sub;
@@ -128,6 +105,21 @@ export class ServerGateway
             map,
             player,
           });
+          if (
+            !lobby.private &&
+            !lobby.started &&
+            lobby.users.length >= map.configuration.minPlayer
+          ) {
+            console.log('Start public game');
+            await this.serverService.startGame(lobby);
+            await this.schedulerService.scheduleNextTurnForLobby(
+              lobby.id,
+              this.getServer(),
+            );
+            await this.getServer()
+              .in(lobby.id)
+              .emit(GameEvent.START_GAME, { lobby: data.lobbyId });
+          }
         },
         false,
         false,
@@ -158,7 +150,7 @@ export class ServerGateway
               "Il n'y a que le propriétaire qui peut lancer la partie",
             );
           }
-          await this.serverService.startGame(lobby, player, map, socket);
+          await this.serverService.startGame(lobby);
           await this.schedulerService.scheduleNextTurnForLobby(
             lobby.id,
             this.getServer(),

@@ -17,7 +17,7 @@ import { MapService } from 'src/map/map.service';
 import { CreateLobbyHousesDto } from 'src/house/dto/create-lobby-houses.dto';
 import { AchievementType } from 'src/user/user.schema';
 import { Server } from 'socket.io';
-import { Doc, GameEvent } from 'src/server/server.type';
+import { Bank, Doc, GameEvent } from 'src/server/server.type';
 import { Player } from 'src/player/player.schema';
 
 @Injectable()
@@ -31,8 +31,10 @@ export class LobbyService {
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 
-  async create(createLobbyDto: CreateLobbyDto, ownerId: string) {
+  async createPrivate(createLobbyDto: CreateLobbyDto, ownerId: string) {
+    console.log(createLobbyDto);
     const session = await this.connection.startSession();
+    let lobbyId = '';
     try {
       session.startTransaction();
       // Créez le lobby
@@ -53,10 +55,9 @@ export class LobbyService {
         turnCountMax: createLobbyDto.turnCountMax,
         startTime: new Date(),
         started: false,
+        code: lobbyCode,
       });
-      if (createLobbyDto.code) {
-        newLobby.code = lobbyCode;
-      }
+
       // Vérification que la carte existe
       const map = await this.mapService.findOne(createLobbyDto.map);
       if (!map) {
@@ -95,6 +96,7 @@ export class LobbyService {
         ownerId,
         AchievementType.gameCreator,
       );
+      lobbyId = newL.id;
       await this.houseService.generateLobbyHouses(createLobbyHousesDto),
         await session.commitTransaction();
     } catch (error) {
@@ -105,7 +107,51 @@ export class LobbyService {
       session.endSession();
     }
 
-    return HttpStatus.CREATED;
+    return lobbyId;
+  }
+
+  async createPublic(createLobbyDto: CreateLobbyDto) {
+    const session = await this.connection.startSession();
+    let lobbyId = '';
+    try {
+      session.startTransaction();
+      // Créez le lobby
+      const newLobbyId = new mongoose.Types.ObjectId();
+      const lobbyCode = nanoid(6);
+      const newLobby = new this.lobbyModel({
+        _id: newLobbyId,
+        owner: Bank.id,
+        code: lobbyCode,
+        users: [],
+        map: createLobbyDto.map,
+        private: false,
+        turnSchedule: createLobbyDto.turnSchedule,
+        turnCount: createLobbyDto.turnCountMax,
+        turnCountMax: createLobbyDto.turnCountMax,
+        startTime: new Date(),
+        started: false,
+      });
+      // Vérification que la carte existe
+      const map = await this.mapService.findOne(createLobbyDto.map);
+      if (!map) {
+        throw new NotFoundException('Map not found');
+      }
+      // Créez les maisons
+      const createLobbyHousesDto: CreateLobbyHousesDto = {
+        lobby: newLobbyId,
+        map: map,
+      };
+      const newL = await newLobby.save();
+      lobbyId = newL.id;
+      await this.houseService.generateLobbyHouses(createLobbyHousesDto);
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+    return lobbyId;
   }
 
   async joinLobby(
@@ -142,6 +188,11 @@ export class LobbyService {
       if (!user.lobbies.includes(lobbyId)) {
         await this.userService.findByIdAndUpdate(userId, {
           $push: { lobbies: lobbyId },
+        });
+      }
+      if (!lobby.users.includes(userId)) {
+        await this.lobbyModel.findByIdAndUpdate(lobbyId, {
+          $push: { users: userId },
         });
       }
       socket
@@ -188,34 +239,22 @@ export class LobbyService {
     return await this.lobbyModel.find();
   }
 
-  async findAllFromUser(userId: string, page: number = 0) {
-    const lobbies = await this.lobbyModel
-      .find({ $in: { users: userId } })
-      .sort({ startTime: -1 })
-      .skip(page * 10)
-      .limit(10)
-      .exec();
-    const extendedLobbies = [];
-    for (const lobby of lobbies) {
-      const userIds = lobby.users;
-      const users = await this.userService.findByIds(userIds, 3);
-      extendedLobbies.push({ lobby, users });
-    }
+  async findAllPublicRunning() {
+    return await this.lobbyModel.find({
+      private: false,
+      turnCount: { $gt: 0 },
+    });
+  }
+
+  async findAllRunning(): Promise<Doc<Lobby>[]> {
+    return await this.lobbyModel.find({ started: true, turnCount: { $gt: 0 } });
   }
 
   async findOne(lobbyId: string) {
     return await this.lobbyModel.findById(lobbyId);
   }
 
-  async present(lobbyId: string) {
-    const lobby = await this.lobbyModel.findById(lobbyId);
-    const ids = lobby.users;
-    const users = await this.userService.findByIds(ids, 3);
-    const map = await this.mapService.findOne(lobby.map);
-    return { lobby, users, map };
-  }
-
-  async presents(userId: string) {
+  async findAllFromUser(userId: string) {
     const user = await this.userService.findOne(userId);
     const ids = user.lobbies;
     const lobbies = await this.lobbyModel.find({ _id: { $in: ids } });
@@ -232,35 +271,23 @@ export class LobbyService {
     return extendedLobbies;
   }
 
-  async findPublic(date: Date, page: number, limit: number) {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
-
-    const skip = (page - 1) * limit;
-
-    const lobbys = this.lobbyModel
-      .find({
-        startTime: {
-          $gte: start,
-          $lt: end,
-        },
-        code: { $exists: false },
-      })
-      .skip(skip)
-      .limit(limit)
+  async findPublic(page: number = 0) {
+    const lobbies = await this.lobbyModel
+      .find({ private: false })
+      .sort({ startTime: -1 })
+      .skip(page * 10)
+      .limit(10)
       .exec();
-
-    if (!lobbys) {
-      throw new NotFoundException('No lobbys found');
+    const extendedLobbies = [];
+    for (const lobby of lobbies) {
+      const promises = [];
+      const userIds = lobby.users;
+      promises.push(await this.userService.findByIds(userIds, 3));
+      promises.push(await this.mapService.findOne(lobby.map));
+      const [users, map, player] = await Promise.all(promises);
+      extendedLobbies.push({ lobby, map, users });
     }
-    return lobbys;
-  }
-
-  async findAllRunning(): Promise<Doc<Lobby>[]> {
-    return await this.lobbyModel.find({ started: true, turnCount: { $gt: 0 } });
+    return extendedLobbies;
   }
 
   async findByIdAndUpdate(

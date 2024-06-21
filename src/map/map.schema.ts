@@ -70,11 +70,11 @@ export enum CaseEventType {
 }
 
 export const CaseEvent = [
-  { code: CaseEventType.DICE_DOUBLE, dropRate: 0.1 },
+  { code: CaseEventType.DICE_DOUBLE, dropRate: 0.2 },
   { code: CaseEventType.ELECTRICITY_FAILURE, dropRate: 0.1 },
   { code: CaseEventType.WATER_FAILURE, dropRate: 0.1 },
   { code: CaseEventType.FIRE_FAILURE, dropRate: 0.1 },
-  { code: CaseEventType.RENT_DISCOUNT, dropRate: 0.1 },
+  { code: CaseEventType.RENT_DISCOUNT, dropRate: 0.2 },
   { code: CaseEventType.CASINO, dropRate: 0.3 },
 ];
 

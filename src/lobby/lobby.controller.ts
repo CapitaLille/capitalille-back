@@ -24,37 +24,28 @@ export class LobbyController {
   @Post()
   @UseGuards(AuthGuard)
   async create(@Body() createLobbyDto: CreateLobbyDto, @Request() req) {
-    return await this.lobbyService.create(createLobbyDto, req.user.data.sub);
+    return await this.lobbyService.createPrivate(
+      createLobbyDto,
+      req.user.data.sub,
+    );
   }
 
-  @Get()
+  @Get('joined')
   @UseGuards(AuthGuard)
-  async findAll(@Request() req, @Body() page: number) {
+  async findAllJoined(@Request() req) {
+    return await this.lobbyService.findAllFromUser(req.user.data.sub);
+  }
+
+  @Get('public')
+  @UseGuards(AuthGuard)
+  async findPublicNotJoined(@Request() req, @Body() page: number) {
     if (!page) page = 0;
-    return await this.lobbyService.findAllFromUser(req.user.data.sub, page);
-  }
-
-  @Get('present/:lobbyId')
-  @UseGuards(AuthGuard)
-  async present(@Param('lobbyId') lobbyId: string, @Request() req) {
-    return await this.lobbyService.present(lobbyId);
-  }
-
-  @Get('presents')
-  @UseGuards(AuthGuard)
-  async presents(@Request() req) {
-    return await this.lobbyService.presents(req.user.data.sub);
+    return await this.lobbyService.findPublic(page);
   }
 
   @Get(':lobbyId')
   async findOne(@Param('lobbyId') lobbyId: string) {
     return await this.lobbyService.findOne(lobbyId);
-  }
-
-  @Delete(':lobbyId')
-  @UseGuards(AuthGuard)
-  async remove(@Param('lobbyId') lobbyId: string) {
-    return await this.lobbyService.deleteLobby(lobbyId);
   }
 
   @Post('multiple')

@@ -39,7 +39,6 @@ export class UserService {
       throw new BadRequestException('userId not defined in findOne user.');
     }
     const user = await this.userModel.findById(userId);
-    console.log('user', user);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -150,6 +149,14 @@ export class UserService {
       type: 'friendRequest',
     };
     await this.pushNotification(notificationDto);
+    return HttpStatus.OK;
+  }
+
+  private async deleteLobby(lobbyId: string) {
+    await this.userModel.updateMany(
+      { lobbies: lobbyId },
+      { $pull: { lobbies: lobbyId } },
+    );
     return HttpStatus.OK;
   }
 
@@ -416,8 +423,12 @@ export class UserService {
   async claimAchievement(
     userId: string,
     achievement: AchievementType,
-    level: number,
+    levelTmp: number,
   ) {
+    console.log(levelTmp);
+    const level = Number(levelTmp);
+    console.log(level);
+
     const levelCount = [1, 10, 100, 250, 500];
     if (level < 0 || level > 4) {
       throw new ConflictException('Invalid achievement level');
@@ -561,13 +572,57 @@ export class UserService {
           throw new ConflictException('Invalid achievement level');
         }
         break;
+      case AchievementType.studentLeague:
+        achievementClass = Achievement.studentLeague;
+        console.log(Achievement.studentLeague.level, level);
+        if (!Achievement.studentLeague.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.annuitantLeague:
+        achievementClass = Achievement.annuitantLeague;
+        if (!Achievement.annuitantLeague.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.friend:
+        achievementClass = Achievement.friend;
+        if (!Achievement.friend.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.mafiaLeague:
+        achievementClass = Achievement.mafiaLeague;
+        if (!Achievement.mafiaLeague.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.student:
+        achievementClass = Achievement.student;
+        if (!Achievement.student.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.teleport:
+        achievementClass = Achievement.teleport;
+        if (!Achievement.teleport.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
+      case AchievementType.thiefLeague:
+        achievementClass = Achievement.thiefLeague;
+        if (!Achievement.thiefLeague.level.includes(level)) {
+          throw new ConflictException('Invalid achievement level');
+        }
+        break;
       default:
+        console.log('bad achievement', achievement);
         throw new ConflictException('Invalid achievement');
     }
     const findAchievement = user.achievements.find(
       (e) => e.name === achievement,
     );
-    if (user.achievements.includes(achievementClass)) {
+    if (findAchievement && user.achievements.includes(achievementClass)) {
       if (findAchievement.level.includes(level)) {
         throw new ConflictException('Achievement already claimed');
       }
@@ -577,7 +632,7 @@ export class UserService {
     }
     const achievementInstance = new AchievementClass({
       name: achievement,
-      level: [...findAchievement.level, level],
+      level: findAchievement ? [...findAchievement.level, level] : [level],
     });
     await this.userModel.findByIdAndUpdate(userId, {
       $pull: { achievements: { name: achievementInstance.name } },

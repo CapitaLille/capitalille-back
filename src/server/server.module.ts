@@ -19,6 +19,8 @@ import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ConstantsService } from 'src/user/constants';
 import { ExecutionManagementService } from './execution.service';
+import { HistoryService } from 'src/history/history.service';
+import { HistorySchema } from 'src/history/history.schema';
 
 @Module({
   providers: [
@@ -30,6 +32,7 @@ import { ExecutionManagementService } from './execution.service';
     LobbyService,
     PlayerService,
     SchedulerService,
+    HistoryService,
     SchedulerRegistry,
     MapService,
     HouseService,
@@ -42,6 +45,8 @@ import { ExecutionManagementService } from './execution.service';
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
     MongooseModule.forFeature([{ name: 'Map', schema: MapSchema }]),
     MongooseModule.forFeature([{ name: 'House', schema: HouseSchema }]),
+    MongooseModule.forFeature([{ name: 'History', schema: HistorySchema }]),
+
     ServerModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

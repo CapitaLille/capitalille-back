@@ -419,12 +419,7 @@ export class ServerService {
     }
   }
 
-  async startGame(
-    lobby: Doc<Lobby>,
-    player: Doc<Player>,
-    map: Doc<Map>,
-    socket: ServerGuardSocket,
-  ) {
+  async startGame(lobby: Doc<Lobby>) {
     if (lobby.started) {
       throw new ForbiddenException('Game already started');
     }

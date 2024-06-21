@@ -1490,7 +1490,7 @@ export class MapService {
     const houses = [];
     for (let i = 0; i < map.houses.length; i++) {
       const priceIndex = Math.floor(Math.random() * i);
-      let house = {
+      const house = {
         objectName: map.houses[i].objectName,
         coordinates: map.houses[i].coordinates,
         cases: map.houses[i].cases,
@@ -1608,6 +1608,7 @@ export class MapService {
         return event.code;
       }
     }
+    console.log('No event found');
     return null;
   }
 

@@ -14,7 +14,7 @@ export class ClaimAchievementDto {
   @IsDefined({ message: 'Level is required' })
   @ApiProperty({
     description: 'The level of the achievement.',
-    type: String,
+    type: Number,
   })
   level: AchievementLevel;
 }

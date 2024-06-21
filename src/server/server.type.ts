@@ -1,29 +1,11 @@
 import e from 'express';
 import mongoose from 'mongoose';
+import { CreateLobbyDto } from 'src/lobby/dto/create-lobby.dto';
+import { Configuration } from 'src/map/map.schema';
 import {
   moneyTransactionType,
   ratingTransactionType,
 } from 'src/player/player.schema';
-
-export class GameError<T> {
-  event: string;
-  data: T;
-
-  constructor(message: string = 'Error', data: T = null) {
-    this.event = 'error';
-    this.data = { message, ...data };
-  }
-}
-
-export class GameResponse<T> {
-  event: string;
-  data: T;
-
-  constructor(event: string, data: T, message: string = 'Success') {
-    this.data = { message, ...data };
-    this.event = event;
-  }
-}
 
 export enum GameEvent {
   ERROR = 'error',
@@ -125,3 +107,9 @@ export type Doc<T> = mongoose.Document<unknown, {}, T> &
   T & {
     _id: mongoose.Types.ObjectId;
   };
+
+export const publicServer = {
+  limit: 3,
+  turnSchedule: [120, 240, 2 * 3600, 4 * 3600, 6 * 3600, 12 * 3600, 24 * 3600],
+  turnCountMax: [30, 30, 60, 90, 90, 90, 90],
+};

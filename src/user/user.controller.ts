@@ -91,6 +91,7 @@ export class UserController {
     @Request() req,
     @Body() achievements: ClaimAchievementDto,
   ) {
+    console.log(achievements);
     if (!req.user.data.sub) throw new BadRequestException('No UID provided');
     return await this.userService.claimAchievement(
       req.user.data.sub,

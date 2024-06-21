@@ -51,12 +51,4 @@ export class CreateLobbyDto {
   @IsDefined({ message: 'turnCountMax is required' })
   @IsNumberString({}, { message: 'turnCountMax must be a number' })
   turnCountMax: number;
-
-  @ApiProperty({
-    description: 'A boolean indicating if the code is required.',
-    type: Boolean,
-  })
-  @IsDefined({ message: 'code is required' })
-  @IsBooleanString({ message: 'code must be a boolean' })
-  code: boolean;
 }

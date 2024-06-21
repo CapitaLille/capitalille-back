@@ -19,10 +19,13 @@ import {
 } from 'src/player/player.schema';
 import { PlayerService } from 'src/player/player.service';
 import { ServerService } from 'src/server/server.service';
-import { Doc, Bank, GameEvent } from 'src/server/server.type';
+import { Doc, Bank, GameEvent, publicServer } from 'src/server/server.type';
 import { AchievementType } from 'src/user/user.schema';
 import { UserService } from 'src/user/user.service';
 import { ServerGateway } from './server.gateway';
+import { HistoryService } from 'src/history/history.service';
+import { Create } from 'sharp';
+import { CreateLobbyDto } from 'src/lobby/dto/create-lobby.dto';
 
 @Injectable()
 export class SchedulerService {
@@ -34,6 +37,7 @@ export class SchedulerService {
     private readonly serverGateway: ServerGateway,
     private readonly userService: UserService,
     private readonly playerService: PlayerService,
+    private readonly historyService: HistoryService,
     private readonly houseService: HouseService,
     private readonly mapService: MapService,
   ) {}
@@ -44,6 +48,72 @@ export class SchedulerService {
     lobbies.forEach(async (lobby) => {
       promises.push(this.scheduleNextTurnForLobby(lobby.id, socket));
     });
+    await Promise.all(promises);
+    return HttpStatus.OK;
+  }
+
+  async launchPublicLobbies() {
+    const lobbies = await this.lobbyService.findAllPublicRunning();
+    const promises = [];
+    if (lobbies.length < publicServer.limit) {
+      const lobbyToGenerate = publicServer.limit - lobbies.length;
+      const map = await this.mapService.findAll();
+      const missingMap = map.filter((e) => {
+        return !lobbies.some((l) => l.map === e.id);
+      });
+      const turnSchedules = lobbies.map((e) => e.turnSchedule);
+      const missingTurnSchedules = publicServer.turnSchedule.filter((e) => {
+        return !turnSchedules.includes(e);
+      });
+      for (let i = 0; i < lobbyToGenerate; i++) {
+        const lobbyDto: CreateLobbyDto = {
+          // @ApiProperty({
+          //   description: 'An array of user IDs.',
+          //   type: [String],
+          // })
+          // @IsDefined({ message: 'users is required' })
+          // @IsArray({ message: 'users must be an array' })
+          // @IsMongoId({
+          //   each: true,
+          //   message: 'Each user ID must be a valid MongoDB ObjectId',
+          // })
+          // @ArrayUnique({ message: 'Users must not contain duplicate IDs' })
+          // users: string[];
+
+          // @ApiProperty({
+          //   description: 'The map ID.',
+          //   type: String,
+          // })
+          // @IsDefined({ message: 'map is required' })
+          // @IsMongoId({ message: 'map must be a valid MongoDB ObjectId' })
+          // map: string;
+
+          // @ApiProperty({
+          //   description: 'The turn schedule in milliseconds.',
+          //   type: Number,
+          // })
+          // @IsDefined({ message: 'turnSchedule is required' })
+          // @IsNumberString({}, { message: 'turnSchedule must be a number' })
+          // turnSchedule: number;
+
+          // @ApiProperty({
+          //   description: 'The maximum number of turns.',
+          //   type: Number,
+          // })
+          // @IsDefined({ message: 'turnCountMax is required' })
+          // @IsNumberString({}, { message: 'turnCountMax must be a number' })
+          // turnCountMax: number;
+          users: [],
+          map: missingMap.length > 0 ? missingMap[0].id : map[0].id,
+          turnSchedule:
+            missingTurnSchedules.length > 0
+              ? missingTurnSchedules[0]
+              : publicServer.turnSchedule[0],
+          turnCountMax: publicServer.turnCountMax[1],
+        };
+        promises.push(this.lobbyService.createPublic(lobbyDto));
+      }
+    }
     await Promise.all(promises);
     return HttpStatus.OK;
   }
@@ -112,7 +182,9 @@ export class SchedulerService {
     }
   }
 
-  async setLeaderboard(lobby: Doc<Lobby>) {
+  async setLeaderboard(
+    lobby: Doc<Lobby>,
+  ): Promise<{ playerId: string; value: number; trophies: number }[]> {
     const newLobby = await this.lobbyService.findOne(lobby.id);
     const players = await this.playerService.findAllFromLobby(lobby.id);
     const houses = await this.houseService.findAllFromLobby(lobby.id);
@@ -137,8 +209,11 @@ export class SchedulerService {
     leaderboard.sort((a, b) => b.globalValue - a.globalValue);
     const trophies = newLobby.users.length * 100;
     for (let i = 0; i < leaderboard.length; i++) {
-      const multiplicator =
+      let multiplicator =
         ((leaderboard.length - 1) / 2 - i) / (leaderboard.length - 1);
+      multiplicator = Number.isNaN(multiplicator) ? 0 : multiplicator;
+      console.log(multiplicator);
+      console.log(trophies);
       leaderboard[i].trophies = trophies * multiplicator;
     }
     for (const player of players) {
@@ -163,7 +238,6 @@ export class SchedulerService {
     const newLobby2 = await this.lobbyService.findByIdAndUpdate(
       lobby.id,
       {
-        turnCount: 0,
         leaderboard: leaderboard,
       },
       this.serverGateway.getServer(),
@@ -361,6 +435,13 @@ export class SchedulerService {
     }
     if (newLobby.turnCount === 0) {
       const leaderboard = await this.setLeaderboard(newLobby);
+      const history = await this.historyService.create(
+        players,
+        newLobby,
+        houses,
+        map,
+        leaderboard,
+      );
       socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
     }
   }
