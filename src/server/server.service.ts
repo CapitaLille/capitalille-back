@@ -262,10 +262,7 @@ export class ServerService {
       Bank.id,
       player.id,
       moneyTransactionType.SALARY,
-      this.serverGateway.getServer(),
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: true,
       },
@@ -307,10 +304,7 @@ export class ServerService {
               player.id,
               Bank.id,
               moneyTransactionType.LOAN_REPAY,
-              socket,
               {
-                socketEmitSourcePlayer: false,
-                socketEmitTargetPlayer: false,
                 createTransactionDocument: true,
                 forceTransaction: true,
               },
@@ -352,10 +346,7 @@ export class ServerService {
                 player.id,
                 house.owner,
                 moneyTransactionType.RENT,
-                socket,
                 {
-                  socketEmitSourcePlayer: false,
-                  socketEmitTargetPlayer: true,
                   createTransactionDocument: true,
                   forceTransaction: true,
                 },
@@ -447,15 +438,10 @@ export class ServerService {
     fromPlayer: Doc<Player> | string,
     toPlayer: Doc<Player> | string,
     type: moneyTransactionType,
-    socket: ServerGuardSocket | Server,
     data: {
-      socketEmitSourcePlayer: boolean;
-      socketEmitTargetPlayer: boolean;
       createTransactionDocument: boolean;
       forceTransaction: boolean;
     } = {
-      socketEmitSourcePlayer: true,
-      socketEmitTargetPlayer: true,
       createTransactionDocument: false,
       forceTransaction: false,
     },
@@ -464,82 +450,62 @@ export class ServerService {
       throw new BadRequestException('Player ID cannot be empty');
     }
     try {
-      let newFromPlayer: Doc<Player>;
-      let newToPlayer: Doc<Player>;
+      let fromPlayerTmp: Doc<Player>;
+      let toPlayerTmp: Doc<Player>;
+
+      //#region Assign players and check if they have enough money
       if (typeof toPlayer === typeof '' && toPlayer !== Bank.id) {
-        newToPlayer = await this.playerService.findOneById(toPlayer.toString());
+        toPlayerTmp = await this.playerService.findOneById(toPlayer.toString());
+      } else {
+        toPlayerTmp.id = Bank.id;
       }
       if (typeof fromPlayer === typeof '' && fromPlayer !== Bank.id) {
-        newFromPlayer = await this.playerService.findOneById(
+        fromPlayerTmp = await this.playerService.findOneById(
           fromPlayer.toString(),
         );
-        if (!data.forceTransaction && newFromPlayer.money < amount) {
-          const targetSocketId = await this.getSocketId(newToPlayer.id);
-          socket.to(targetSocketId).emit(GameEvent.NOT_ENOUGH_MONEY);
+        if (!data.forceTransaction && fromPlayerTmp.money < amount) {
+          const targetSocketId = await this.getSocketId(fromPlayerTmp.id);
           throw new ForbiddenException('Not enough money');
         }
+      } else {
+        fromPlayerTmp.id = Bank.id;
       }
+      //#endregion
 
+      //#region Update players money and add achievements pay me
       if (typeof fromPlayer === typeof '' && fromPlayer !== Bank.id) {
         await this.playerService.findByIdAndUpdate(
-          newFromPlayer.id,
+          fromPlayerTmp.id,
           {
             $inc: { money: -amount },
           },
           this.serverGateway.getServer(),
         );
-        if (data.socketEmitSourcePlayer) {
-          const targetSocketId = await this.getSocketId(newFromPlayer.id);
-          await socket
-            .to(targetSocketId)
-            .emit(
-              GameEvent.MONEY_CHANGE,
-              new MoneyChangeData(
-                newFromPlayer?.id,
-                newToPlayer?.id ? newToPlayer?.id : Bank.id,
-                amount,
-                type,
-              ),
-            );
-        }
       }
       if (typeof toPlayer === typeof '' && toPlayer !== Bank.id) {
         await this.playerService.findByIdAndUpdate(
-          newToPlayer.id,
+          toPlayerTmp.id,
           {
             $inc: { money: amount },
           },
           this.serverGateway.getServer(),
         );
         await this.userService.statisticsUpdate(
-          newToPlayer.user,
+          toPlayerTmp.user,
           AchievementType.payMe,
         );
-        if (data.socketEmitTargetPlayer) {
-          const targetSocketId = await this.getSocketId(newToPlayer.id);
-          socket
-            .to(targetSocketId)
-            .emit(
-              GameEvent.MONEY_CHANGE,
-              new MoneyChangeData(
-                newFromPlayer?.id ? newFromPlayer?.id : Bank.id,
-                newToPlayer.id,
-                amount,
-                type,
-              ),
-            );
-        }
       }
+      //#endregion
+
       if (data.createTransactionDocument) {
         await this.playerService.generateTransaction(
-          newFromPlayer?.id ? newFromPlayer.id : Bank.id,
+          fromPlayerTmp.id,
+          toPlayerTmp.id,
           amount, // from player deduction
-          newToPlayer?.id ? newToPlayer.id : Bank.id,
           type,
           this.serverGateway.getServer(),
         );
       }
-      return HttpStatus.OK;
     } catch (error) {
       throw new NotImplementedException(
         'playerMoneyTransition : ' + error.message,
@@ -719,10 +685,7 @@ export class ServerService {
           player.id,
           Bank.id,
           moneyTransactionType.BUS,
-          socket,
           {
-            socketEmitSourcePlayer: true,
-            socketEmitTargetPlayer: true,
             createTransactionDocument: true,
             forceTransaction: false,
           },
@@ -739,10 +702,7 @@ export class ServerService {
           player.id,
           Bank.id,
           moneyTransactionType.METRO,
-          socket,
           {
-            socketEmitSourcePlayer: true,
-            socketEmitTargetPlayer: true,
             createTransactionDocument: true,
             forceTransaction: false,
           },
@@ -835,10 +795,7 @@ export class ServerService {
         Bank.id,
         house.nextOwner,
         moneyTransactionType.AUCTION,
-        socket,
         {
-          socketEmitSourcePlayer: true,
-          socketEmitTargetPlayer: true,
           createTransactionDocument: false,
           forceTransaction: true,
         },
@@ -849,10 +806,7 @@ export class ServerService {
       player.id,
       Bank.id,
       moneyTransactionType.AUCTION,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: false,
         forceTransaction: true,
       },
@@ -907,10 +861,7 @@ export class ServerService {
       player.id,
       Bank.id,
       moneyTransactionType.CASINO,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: false,
       },
@@ -925,10 +876,7 @@ export class ServerService {
         Bank.id,
         player.id,
         moneyTransactionType.CASINO,
-        socket,
         {
-          socketEmitSourcePlayer: true,
-          socketEmitTargetPlayer: true,
           createTransactionDocument: true,
           forceTransaction: false,
         },
@@ -964,10 +912,7 @@ export class ServerService {
       player.id,
       Bank.id,
       moneyTransactionType.MONUMENTS_PAY,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: false,
       },
@@ -975,8 +920,8 @@ export class ServerService {
     await this.playerRatingTransaction(monument.bonus, player.id, socket);
     await this.playerService.generateTransaction(
       Bank.id,
-      monument.bonus,
       player.id,
+      monument.bonus,
       ratingTransactionType.MONUMENTS_RATING,
       this.serverGateway.getServer(),
     );
@@ -1000,8 +945,8 @@ export class ServerService {
       if (random < map.configuration.fraudChance) {
         await this.playerService.generateTransaction(
           player.id,
-          0,
           house.owner,
+          0,
           moneyTransactionType.RENT_FRAUD,
           this.serverGateway.getServer(),
         );
@@ -1016,10 +961,7 @@ export class ServerService {
           player.id,
           house.owner,
           moneyTransactionType.RENT_FINED,
-          socket,
           {
-            socketEmitSourcePlayer: true,
-            socketEmitTargetPlayer: true,
             createTransactionDocument: true,
             forceTransaction: true,
           },
@@ -1032,10 +974,7 @@ export class ServerService {
       player.id,
       house.owner,
       moneyTransactionType.RENT,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: true,
       },
@@ -1064,8 +1003,8 @@ export class ServerService {
       );
     await this.playerService.generateTransaction(
       sourcePlayerId,
-      cops,
       targetPlayerId,
+      cops,
       ratingTransactionType.COPS_RATING,
       this.serverGateway.getServer(),
     );
@@ -1090,10 +1029,7 @@ export class ServerService {
       player.id,
       Bank.id,
       moneyTransactionType.SCHOOL,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: false,
       },
@@ -1161,10 +1097,7 @@ export class ServerService {
       player.id,
       Bank.id,
       moneyTransactionType.REPAIR,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: false,
       },
@@ -1205,7 +1138,6 @@ export class ServerService {
       );
     }
     if (player.money < house.price[house.level + 1]) {
-      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
       throw new ForbiddenException("Pas assez d'argent");
     }
     await this.playerMoneyTransaction(
@@ -1213,10 +1145,7 @@ export class ServerService {
       player.id,
       Bank.id,
       moneyTransactionType.UPGRADE_HOUSE,
-      socket,
       {
-        socketEmitSourcePlayer: true,
-        socketEmitTargetPlayer: true,
         createTransactionDocument: true,
         forceTransaction: false,
       },

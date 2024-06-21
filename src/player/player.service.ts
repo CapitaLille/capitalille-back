@@ -25,6 +25,7 @@ import { Map } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
 import { Server } from 'socket.io';
 import { User } from 'src/user/user.schema';
+import { from } from 'rxjs';
 
 @Injectable()
 export class PlayerService {
@@ -213,115 +214,91 @@ export class PlayerService {
    */
   async generateTransaction(
     fromPlayerId: string,
-    amount: number,
     targetPlayerId: string,
+    amount: number,
     type: moneyTransactionType | ratingTransactionType,
     Server: Server,
   ) {
     try {
-      if (amount <= 0) {
-        console.warn('Cannot transfer negative or null amount of money.');
+      if (fromPlayerId === '' || targetPlayerId === '') {
+        throw new BadRequestException('No player ID provided.');
+      }
+      if (amount < 0) {
+        console.warn('Cannot transfer negative amount of money.');
         return;
       }
-      // If the sender is the bank, we don't need to update the sender player.
-      if (fromPlayerId !== Bank.id) {
-        const player = await this.playerModel.findById(
-          fromPlayerId,
-          '+transactions',
-        );
-        if (!player) {
-          return undefined;
-        }
-        if (player.transactions.length !== 0) {
-          const last = player.transactions[player.transactions.length - 1];
-          if (
-            type === moneyTransactionType.SALARY &&
-            last.type === moneyTransactionType.SALARY
-          ) {
-            const lastIndex = player.transactions.length - 1;
-            const updateQuery = {};
-            const lastTransaction = player.transactions[lastIndex];
-            lastTransaction.amount += amount;
-            if (!lastTransaction?.stack) {
-              lastTransaction.stack = 1;
-            }
-            lastTransaction.stack += 1;
-            updateQuery[`transactions.${lastIndex}`] = lastTransaction;
-            lastTransaction.playerId = Bank.id;
-            const updatedPlayer = await this.playerModel.findByIdAndUpdate(
-              player.id,
-              { $set: updateQuery },
-              { new: true },
-            );
-          }
-        } else {
-          await this.findByIdAndUpdate(
-            player.id,
-            {
-              $push: {
-                transactions: {
-                  amount: -amount,
-                  playerId: targetPlayerId,
-                  type,
-                  stack: 1,
-                  date: new Date(),
-                },
-              },
-            },
-            Server,
-          );
-        }
+      if (fromPlayerId === targetPlayerId) {
+        console.warn('Cannot transfer money to yourself.');
+        return;
       }
-      // If the target is the bank, we don't need to update the target player.
+      if (fromPlayerId !== Bank.id) {
+        const fromTransaction = this.createTransaction(
+          fromPlayerId,
+          targetPlayerId,
+          amount,
+          type,
+          Server,
+        );
+      }
       if (targetPlayerId !== Bank.id) {
-        const player = await this.findOneById(targetPlayerId, '+transactions');
-        if (!player) {
-          return undefined;
-        }
-        if (player.transactions.length !== 0) {
-          const last = player.transactions[player.transactions.length - 1];
-          if (
-            type === moneyTransactionType.SALARY &&
-            last.type === moneyTransactionType.SALARY
-          ) {
-            const lastIndex = player.transactions.length - 1;
-            const updateQuery = {};
-            const lastTransaction = player.transactions[lastIndex];
-            lastTransaction.amount += amount;
-            if (!lastTransaction?.stack) {
-              lastTransaction.stack = 1;
-            }
-            lastTransaction.stack += 1;
-            updateQuery[`transactions.${lastIndex}`] = lastTransaction;
-            lastTransaction.playerId = Bank.id;
-            const updatedPlayer = await this.playerModel.findByIdAndUpdate(
-              player.id,
-              { $set: updateQuery },
-              { new: true },
-            );
-          }
-        } else {
-          await this.findByIdAndUpdate(
-            player.id,
-            {
-              $push: {
-                transactions: {
-                  amount: amount,
-                  playerId: targetPlayerId,
-                  type,
-                  stack: 1,
-                  date: new Date(),
-                },
-              },
-            },
-            Server,
-          );
-        }
+        const toTransaction = this.createTransaction(
+          targetPlayerId,
+          fromPlayerId,
+          -amount,
+          type,
+          Server,
+        );
       }
     } catch (error) {
       console.error('playerGenerateTransaction : ' + error.message);
       throw new NotImplementedException(
         'playerGenerateTransaction : ' + error.message,
+      );
+    }
+  }
+
+  /**
+   * Generate a transaction from player.
+   * @param player
+   * @param amount
+   * @param type
+   * @returns
+   */
+  private async createTransaction(
+    fromPlayerId: string,
+    toPlayerId: string,
+    amount: number,
+    type: moneyTransactionType | ratingTransactionType,
+    Server: Server,
+  ) {
+    const player = await this.playerModel.findById(
+      fromPlayerId,
+      '+transactions',
+    );
+    const transactions = player.transactions;
+    if (
+      transactions[transactions.length - 1].type ===
+        moneyTransactionType.SALARY &&
+      type === moneyTransactionType.SALARY
+    ) {
+      transactions[transactions.length - 1].amount += amount;
+      transactions[transactions.length - 1].stack += 1;
+      this.findByIdAndUpdate(player.id, { transactions }, Server);
+    } else {
+      this.findByIdAndUpdate(
+        player.id,
+        {
+          $push: {
+            transactions: {
+              amount,
+              playerId: toPlayerId,
+              type,
+              stack: 1,
+              date: new Date(),
+            },
+          },
+        },
+        Server,
       );
     }
   }

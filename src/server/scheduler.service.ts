@@ -311,18 +311,12 @@ export class SchedulerService {
           );
         }
         promises.push(
-          this.serverService.playerMoneyTransaction(
-            auction,
+          this.playerService.generateTransaction(
+            owner,
             nextOwner !== '' ? nextOwner : Bank.id,
-            owner !== '' ? owner : Bank.id,
+            auction,
             moneyTransactionType.HOUSE_TRANSACTION,
-            socket,
-            {
-              socketEmitSourcePlayer: false,
-              socketEmitTargetPlayer: false,
-              forceTransaction: true,
-              createTransactionDocument: true,
-            },
+            this.serverGateway.getServer(),
           ),
         );
         promises.push(
@@ -339,49 +333,39 @@ export class SchedulerService {
         );
         await Promise.all(promises);
       }
-      if (house.state === houseState.FREE) {
-        const auction =
-          house.auction === 0 ? house.price[house.level] : house.auction;
+      if (house.state === houseState.FREE && house.nextOwner !== '') {
+        const auction = house.auction;
         const owner = house.owner;
         const nextOwner = house.nextOwner;
         const promises = [];
-
-        if (nextOwner !== '') {
-          promises.push(
-            this.userService.statisticsUpdate(
-              nextOwner,
-              AchievementType.auctionWinner,
-            ),
-          );
-          promises.push(
-            this.serverService.playerMoneyTransaction(
-              auction,
-              nextOwner !== '' ? nextOwner : Bank.id,
-              owner !== '' ? owner : Bank.id,
-              moneyTransactionType.HOUSE_TRANSACTION,
-              socket,
-              {
-                socketEmitSourcePlayer: false,
-                socketEmitTargetPlayer: false,
-                forceTransaction: true,
-                createTransactionDocument: true,
-              },
-            ),
-          );
-          promises.push(
-            this.houseService.findByIdAndUpdate(
-              house.id,
-              {
-                owner: nextOwner,
-                nextOwner: '',
-                auction: 0,
-                state: houseState.OWNED,
-              },
-              this.serverGateway.getServer(),
-            ),
-          );
-          await Promise.all(promises);
-        }
+        promises.push(
+          this.userService.statisticsUpdate(
+            nextOwner,
+            AchievementType.auctionWinner,
+          ),
+        );
+        promises.push(
+          this.playerService.generateTransaction(
+            owner,
+            nextOwner,
+            auction,
+            moneyTransactionType.HOUSE_TRANSACTION,
+            this.serverGateway.getServer(),
+          ),
+        );
+        promises.push(
+          this.houseService.findByIdAndUpdate(
+            house.id,
+            {
+              owner: nextOwner,
+              nextOwner: '',
+              auction: 0,
+              state: houseState.OWNED,
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
+        await Promise.all(promises);
       }
       if (house.state === houseState.OWNED && house.owner.length === 0) {
         // Fix house state if owner is empty
@@ -407,14 +391,20 @@ export class SchedulerService {
 
     for (const player of players) {
       if (player.money < 0 && player.lost === false) {
-        await this.playerService.findByIdAndUpdate(
-          player.id,
-          {
-            money: 0,
-            houses: [],
-            lost: true,
-          },
-          this.serverGateway.getServer(),
+        const promises = [];
+        promises.push(
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              money: 0,
+              houses: [],
+              lost: true,
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
+        promises.push(
+          await this.houseService.freeHouseFromOwner(player.id, lobby.id),
         );
         const targetSocketId = await this.serverService.getSocketId(
           player.user,
