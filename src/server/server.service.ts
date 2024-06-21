@@ -391,7 +391,7 @@ export class ServerService {
           return GameEvent.COPS_REQUEST;
         case CaseType.SCHOOL:
           return GameEvent.SCHOOL_REQUEST;
-        default:
+        case CaseType.default:
           await this.playerService.findByIdAndUpdate(
             player.id,
             {

@@ -35,10 +35,9 @@ export class AuthService {
       throw new BadRequestException('Mail already used');
     }
 
-    createAuthDto.password = await bcrypt.hash(
-      createAuthDto.password,
-      this.constantsService.bcryptConstants.salt,
-    );
+    const salt = Number(this.constantsService.bcryptConstants.salt);
+    console.log(salt);
+    createAuthDto.password = await bcrypt.hash(createAuthDto.password, salt);
 
     const user = await this.userModel.create(createAuthDto);
     const token = await this.generateTokens(user);
@@ -71,6 +70,7 @@ export class AuthService {
     }
 
     const foundUser = await this.userModel.findOne({ email: user.data.email });
+    console.log('foundUser', foundUser);
     if (foundUser !== null) {
       return await this.generateTokens({
         ...user.data,

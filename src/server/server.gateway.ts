@@ -576,10 +576,7 @@ export class ServerGateway
             !house.activeDefect.water &&
             !house.activeDefect.electricity
           ) {
-            this.getServer().to(lobby.id).emit(GameEvent.ERROR, {
-              message: 'Cette maison est en parfait état.',
-            });
-            throw new ForbiddenException('House has no defect.');
+            throw new ForbiddenException('Cette maison est en parfait état.');
           }
           await this.serverService.playerAction(
             PlayerEvent.REPAIR_HOUSE,
