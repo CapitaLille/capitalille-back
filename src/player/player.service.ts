@@ -257,6 +257,10 @@ export class PlayerService {
     }
   }
 
+  async changePp(userId: string, pp: string) {
+    this.playerModel.updateMany({ user: userId }, { pp: pp });
+  }
+
   /**
    * Generate a transaction from player.
    * @param player

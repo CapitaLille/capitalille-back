@@ -23,6 +23,7 @@ import { nanoid } from 'nanoid';
 import { ConfigService } from '@nestjs/config';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 import { ConstantsService } from './constants';
+import { PlayerService } from 'src/player/player.service';
 
 @Injectable()
 export class UserService {
@@ -30,6 +31,7 @@ export class UserService {
     private readonly configService: ConfigService,
     private readonly fileService: FilesAzureService,
     private readonly constantsService: ConstantsService,
+    private readonly playerService: PlayerService,
     @InjectModel('User') private readonly userModel: Model<User>,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
@@ -659,6 +661,7 @@ export class UserService {
     await this.userModel.findByIdAndUpdate(userId, {
       pp: upload,
     });
+    await this.playerService.changePp(userId, upload);
     return { pp: upload };
   }
 

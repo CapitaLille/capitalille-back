@@ -15,6 +15,8 @@ import { HouseModule } from 'src/house/house.module';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 import { ConfigService } from '@nestjs/config';
 import { ConstantsService } from './constants';
+import { PlayerService } from 'src/player/player.service';
+import { PlayerSchema } from 'src/player/player.schema';
 
 @Module({
   controllers: [UserController],
@@ -22,6 +24,7 @@ import { ConstantsService } from './constants';
     JwtService,
     LobbyService,
     UserService,
+    PlayerService,
     FilesAzureService,
     ConstantsService,
     ConfigService,
@@ -29,6 +32,7 @@ import { ConstantsService } from './constants';
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
+    MongooseModule.forFeature([{ name: 'Player', schema: PlayerSchema }]),
     PlayerModule,
     MapModule,
     HouseModule,

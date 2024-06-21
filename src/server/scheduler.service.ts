@@ -67,49 +67,13 @@ export class SchedulerService {
       });
       for (let i = 0; i < lobbyToGenerate; i++) {
         const lobbyDto: CreateLobbyDto = {
-          // @ApiProperty({
-          //   description: 'An array of user IDs.',
-          //   type: [String],
-          // })
-          // @IsDefined({ message: 'users is required' })
-          // @IsArray({ message: 'users must be an array' })
-          // @IsMongoId({
-          //   each: true,
-          //   message: 'Each user ID must be a valid MongoDB ObjectId',
-          // })
-          // @ArrayUnique({ message: 'Users must not contain duplicate IDs' })
-          // users: string[];
-
-          // @ApiProperty({
-          //   description: 'The map ID.',
-          //   type: String,
-          // })
-          // @IsDefined({ message: 'map is required' })
-          // @IsMongoId({ message: 'map must be a valid MongoDB ObjectId' })
-          // map: string;
-
-          // @ApiProperty({
-          //   description: 'The turn schedule in milliseconds.',
-          //   type: Number,
-          // })
-          // @IsDefined({ message: 'turnSchedule is required' })
-          // @IsNumberString({}, { message: 'turnSchedule must be a number' })
-          // turnSchedule: number;
-
-          // @ApiProperty({
-          //   description: 'The maximum number of turns.',
-          //   type: Number,
-          // })
-          // @IsDefined({ message: 'turnCountMax is required' })
-          // @IsNumberString({}, { message: 'turnCountMax must be a number' })
-          // turnCountMax: number;
-          users: [],
           map: missingMap.length > 0 ? missingMap[0].id : map[0].id,
           turnSchedule:
             missingTurnSchedules.length > 0
               ? missingTurnSchedules[0]
               : publicServer.turnSchedule[0],
           turnCountMax: publicServer.turnCountMax[1],
+          users: [],
         };
         promises.push(this.lobbyService.createPublic(lobbyDto));
       }

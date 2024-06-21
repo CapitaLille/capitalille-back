@@ -9,10 +9,14 @@ import { UserService } from 'src/user/user.service';
 import { FilesAzureService } from 'src/fileazure/filesAzure.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ConstantsService } from 'src/user/constants';
+import { PlayerService } from 'src/player/player.service';
+import { PlayerSchema } from 'src/player/player.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: 'Player', schema: PlayerSchema }]),
+
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -26,6 +30,7 @@ import { ConstantsService } from 'src/user/constants';
   providers: [
     AuthService,
     JwtService,
+    PlayerService,
     ConstantsService,
     MailerService,
     UserService,
