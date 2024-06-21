@@ -450,8 +450,8 @@ export class ServerService {
       throw new BadRequestException('Player ID cannot be empty');
     }
     try {
-      let fromPlayerTmp: Doc<Player>;
-      let toPlayerTmp: Doc<Player>;
+      let fromPlayerTmp: Doc<Player> | { id: string } = { id: '' };
+      let toPlayerTmp: Doc<Player> | { id: string } = { id: '' };
 
       //#region Assign players and check if they have enough money
       if (typeof toPlayer === typeof '' && toPlayer !== Bank.id) {
@@ -490,10 +490,12 @@ export class ServerService {
           },
           this.serverGateway.getServer(),
         );
-        await this.userService.statisticsUpdate(
-          toPlayerTmp.user,
-          AchievementType.payMe,
-        );
+        // if (toPlayerTmp === typeof Doc<Player>) {
+        // }
+        // await this.userService.statisticsUpdate(
+        //   toPlayerTmp.user,
+        //   AchievementType.payMe,
+        // );
       }
       //#endregion
 

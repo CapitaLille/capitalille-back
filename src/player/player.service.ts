@@ -251,7 +251,7 @@ export class PlayerService {
       }
     } catch (error) {
       console.error('playerGenerateTransaction : ' + error.message);
-      throw new NotImplementedException(
+      throw new BadRequestException(
         'playerGenerateTransaction : ' + error.message,
       );
     }

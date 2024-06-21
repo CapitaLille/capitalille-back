@@ -347,7 +347,6 @@ export class SchedulerService {
       }
       if (house.state === houseState.FREE && house.nextOwner !== '') {
         const auction = house.auction;
-        const owner = house.owner;
         const nextOwner = house.nextOwner;
         const promises = [];
         promises.push(
@@ -358,7 +357,7 @@ export class SchedulerService {
         );
         promises.push(
           this.playerService.generateTransaction(
-            owner,
+            Bank.id,
             nextOwner,
             auction,
             moneyTransactionType.HOUSE_TRANSACTION,
