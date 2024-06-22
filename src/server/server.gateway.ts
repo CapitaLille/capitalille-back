@@ -54,7 +54,12 @@ export class ServerGateway
   ) {}
   @WebSocketServer() server: Server;
 
-  afterInit(server: Server) {
+  async afterInit(server: Server) {
+    const finishedLobbies = await this.lobbyService.findAllFinished();
+    finishedLobbies.forEach((lobby) => {
+      this.schedulerService.scheduleDeleteLobby(lobby.id);
+    });
+
     this.schedulerService.scheduleLobbies(server);
     this.schedulerService.launchPublicLobbies();
     console.warn('Comment this line to enable scheduler');

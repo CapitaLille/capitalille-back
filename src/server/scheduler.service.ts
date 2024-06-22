@@ -92,15 +92,12 @@ export class SchedulerService {
       return 0;
     }
     let now = new Date();
-    let nextTurnIndex: number = 0;
     let nextTurnTime: Date | null = null;
     let turnTime = new Date(startTime.getTime());
     let i = 0;
     while (turnTime < now) {
       now = new Date();
-      i++;
       turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);
-      nextTurnIndex = i;
       nextTurnTime = turnTime;
     }
     return new Date(nextTurnTime).getTime() - new Date().getTime();
@@ -146,6 +143,23 @@ export class SchedulerService {
     }
   }
 
+  async scheduleDeleteLobby(lobbyId: string) {
+    const lobby = await this.lobbyService.findOne(lobbyId);
+    const jobName = `lobby_${lobbyId}_delete`;
+    // In 24h
+    const deleteAfter = 30 * 1000;
+    const deleteTime = new Date(new Date().getTime() + deleteAfter);
+    if (lobby.turnCount <= 0) {
+      console.log(`Lobby ${lobbyId} scheduled for deletion`);
+      this.scheduleCronJob(jobName, deleteTime, async () => {
+        await this.lobbyService.deleteLobby(lobbyId);
+        if (lobby.private) {
+          await this.launchPublicLobbies();
+        }
+      });
+    }
+  }
+
   async setLeaderboard(
     lobby: Doc<Lobby>,
   ): Promise<{ playerId: string; value: number; trophies: number }[]> {
@@ -170,7 +184,7 @@ export class SchedulerService {
         trophies: 0,
       });
     }
-    leaderboard.sort((a, b) => b.globalValue - a.globalValue);
+    leaderboard.sort((a, b) => a.globalValue - b.globalValue);
     const trophies = newLobby.users.length * 100;
     for (let i = 0; i < leaderboard.length; i++) {
       let multiplicator =
@@ -390,23 +404,25 @@ export class SchedulerService {
 
     let newLobby = await this.lobbyService.findOne(lobby.id);
     if (lobby.turnCount > 0) {
+      const turnCount = lobby.turnCount - 1 < 0 ? 0 : lobby.turnCount - 1;
       newLobby = await this.lobbyService.findByIdAndUpdate(
         lobby.id,
         {
-          $inc: { turnCount: -1 },
+          turnCount: turnCount,
         },
         this.serverGateway.getServer(),
       );
     }
-    if (newLobby.turnCount === 0) {
+    if (newLobby.turnCount <= 0) {
       const leaderboard = await this.setLeaderboard(newLobby);
-      const history = await this.historyService.create(
+      await this.historyService.create(
         players,
         newLobby,
         houses,
         map,
         leaderboard,
       );
+      await this.scheduleDeleteLobby(newLobby.id);
       socket.in(lobby.id).emit(GameEvent.END_GAME, { leaderboard });
     }
   }

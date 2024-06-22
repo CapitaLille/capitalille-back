@@ -221,8 +221,10 @@ export class LobbyService {
       if (!lobby || !lobby._id) {
         throw new NotFoundException('Lobby not found');
       }
+      console.log('delete lobby', lobbyId);
       await this.playerService.deleteAllFromLobby(lobbyId);
       await this.houseService.destroyLobbyHouses(lobbyId);
+      await this.playerService.deleteAllFromLobby(lobbyId);
 
       await session.commitTransaction();
     } catch (error) {
@@ -248,6 +250,11 @@ export class LobbyService {
 
   async findAllRunning(): Promise<Doc<Lobby>[]> {
     return await this.lobbyModel.find({ started: true, turnCount: { $gt: 0 } });
+  }
+
+  async findAllFinished(): Promise<Doc<Lobby>[]> {
+    // turnCount <= 0
+    return await this.lobbyModel.find({ turnCount: { $lte: 0 } });
   }
 
   async findOne(lobbyId: string) {
