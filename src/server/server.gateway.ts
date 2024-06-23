@@ -57,12 +57,14 @@ export class ServerGateway
   async afterInit(server: Server) {
     const finishedLobbies = await this.lobbyService.findAllFinished();
     finishedLobbies.forEach((lobby) => {
+      console.log('Schedule delete lobby', lobby.id);
       this.schedulerService.scheduleDeleteLobby(lobby.id);
     });
 
     this.schedulerService.scheduleLobbies(server);
     this.schedulerService.launchPublicLobbies();
-    console.warn('Comment this line to enable scheduler');
+    // console.warn('Comment this line to enable scheduler');
+    console.log('Server initialized');
   }
 
   handleConnection(client: any, ...args: any[]) {}
@@ -76,11 +78,13 @@ export class ServerGateway
     @ConnectedSocket() socket: ServerGuardSocket,
     @MessageBody() data: { lobbyId: string; code: string },
   ) {
+    console.log('Subscribe', data.lobbyId, socket.handshake.user.sub);
     let player = await this.playerService.findOneByUserId(
       socket.handshake.user.sub,
       data.lobbyId,
     );
     if (!player) {
+      console.log('Join lobby');
       player = await this.lobbyService.joinLobby(
         data.lobbyId,
         socket.handshake.user.sub,
@@ -97,11 +101,16 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
+          console.log('Game session', lobby.id, socket.id);
           const players = await this.playerService.findAllFromLobby(lobby.id);
+          console.log('Players', players.length);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
+          console.log('Houses', houses.length);
           const users = await this.userService.findByIds(lobby.users);
+          console.log('Users', users.length);
           const delay = await this.schedulerService.getDelay(lobby.id);
           socket.emit(GameEvent.NEXT_TURN, { delay });
+          console.log('Emit subscribe', lobby.id, socket.id);
           socket.emit(GameEvent.SUBSCRIBE, {
             lobby,
             houses,
