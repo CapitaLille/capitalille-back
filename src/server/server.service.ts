@@ -57,6 +57,7 @@ import {
   handLeft,
   paperPlane,
   ticket,
+  ticketOutline,
   trophy,
   wallet,
 } from 'src/ion-icon';
@@ -693,7 +694,7 @@ export class ServerService {
         );
         await this.teleportPlayer(player.id, socket);
         const InfoBus: InfoSocket = {
-          icon: ticket,
+          icon: ticketOutline,
           message: 'Vous avez pris le bus.',
           title: 'Ticket payé',
         };
@@ -715,7 +716,7 @@ export class ServerService {
         );
         await this.teleportPlayer(player.id, socket);
         const InfoMetro: InfoSocket = {
-          icon: ticket,
+          icon: ticketOutline,
           message: 'Vous avez pris le métro.',
           title: 'Ticket payé',
         };

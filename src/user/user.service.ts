@@ -385,8 +385,13 @@ export class UserService {
           $inc: { rentFraud: 1 },
         });
         break;
+      case AchievementType.teleport:
+        await this.userModel.findByIdAndUpdate(userId, {
+          $inc: { teleport: 1 },
+        });
+        break;
       default:
-        throw new ConflictException('Invalid achievement');
+        throw new ConflictException('Invalid achievement type ' + achievement);
     }
     return HttpStatus.OK;
   }
