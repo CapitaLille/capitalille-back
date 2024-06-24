@@ -308,7 +308,7 @@ export class ServerGateway
             data.houseIndex,
           );
           if (map.cases[player.casePosition].type !== CaseType.HOUSE) {
-            throw new ForbiddenException('Player is not on a house case');
+            throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (house.owner === player.id) {
             throw new ForbiddenException('Player is the owner of the house');
@@ -316,10 +316,10 @@ export class ServerGateway
           if (
             !map.houses[data.houseIndex].cases.includes(player.casePosition)
           ) {
-            throw new ForbiddenException('Player is not on the house case');
+            throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (player.actionPlayed) {
-            throw new ForbiddenException('Player already played his action');
+            throw new ForbiddenException(ANSWER().);
           }
           await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_FRAUD,
@@ -352,7 +352,7 @@ export class ServerGateway
             data.houseIndex,
           );
           if (map.cases[player.casePosition].type !== CaseType.HOUSE) {
-            throw new ForbiddenException('Player is not on a house case');
+            throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (house.owner === player.id) {
             throw new ForbiddenException('Player is the owner of the house');
@@ -360,10 +360,10 @@ export class ServerGateway
           if (
             !map.houses[data.houseIndex].cases.includes(player.casePosition)
           ) {
-            throw new ForbiddenException('Player is not on the house case');
+            throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (player.actionPlayed) {
-            throw new ForbiddenException('Player already played his action');
+            throw new ForbiddenException(ANSWER().ALREADY_PLAED_ACTION);
           }
           await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_PAY,
@@ -392,7 +392,7 @@ export class ServerGateway
         socket,
         async (lobby, player, map) => {
           if (map.cases[player.casePosition].type !== CaseType.METRO) {
-            throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
+            // throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
@@ -674,7 +674,6 @@ export class ServerGateway
             player.id,
             socket,
           );
-          await socket.emit(GameEvent.SELL_HOUSE);
         },
         true,
         true,

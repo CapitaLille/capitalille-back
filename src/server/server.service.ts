@@ -58,6 +58,7 @@ import {
   paperPlane,
   ticket,
   trophy,
+  wallet,
 } from 'src/ion-icon';
 import { response } from 'express';
 import { ANSWER } from './server.response';
@@ -475,7 +476,7 @@ export class ServerService {
         );
         if (!data.forceTransaction && fromPlayerTmp.money < amount) {
           const targetSocketId = await this.getSocketId(fromPlayerTmp.id);
-          throw new ForbiddenException('Not enough money');
+          throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
         }
       } else {
         fromPlayerTmp.id = Bank.id;
@@ -678,7 +679,7 @@ export class ServerService {
       case PlayerEvent.BUS_PAY:
         if (player.money < map.configuration.busPrice) {
           socket.emit(ANSWER().NOT_ENOUGH_MONEY);
-          throw new ForbiddenException('Not enough money');
+          throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
         }
         await this.playerMoneyTransaction(
           map.configuration.busPrice,
@@ -700,7 +701,7 @@ export class ServerService {
         break;
       case PlayerEvent.METRO_PAY:
         if (player.money < map.configuration.metroPrice) {
-          throw new ForbiddenException('Not enough money');
+          throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
         }
         await this.playerMoneyTransaction(
           map.configuration.metroPrice,
@@ -1217,5 +1218,11 @@ export class ServerService {
       },
       this.serverGateway.getServer(),
     );
+    const sellInfo: InfoSocket = {
+      icon: wallet,
+      message: ANSWER().HOUSE_SELLING,
+      title: 'Maison en vente',
+    };
+    socket.emit(GameEvent.INFO, sellInfo);
   }
 }

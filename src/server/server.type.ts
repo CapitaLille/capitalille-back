@@ -12,7 +12,6 @@ export enum GameEvent {
   SUBSCRIBE = 'subscribe',
   INFO = 'info',
   UNSUBSCRIBE = 'unsubscribe',
-  SELL_HOUSE = 'sellHouse',
   UPGRADE_HOUSE = 'upgradeHouse',
   START_GAME = 'startGame',
   PLAY_TURN = 'playTurn', // Return player's diceBonuses, path, salary and last case gameEvent.
