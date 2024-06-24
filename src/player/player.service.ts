@@ -26,6 +26,7 @@ import { UserService } from 'src/user/user.service';
 import { Server } from 'socket.io';
 import { User } from 'src/user/user.schema';
 import { from } from 'rxjs';
+import { Lobby } from 'src/lobby/lobby.schema';
 
 @Injectable()
 export class PlayerService {
@@ -33,12 +34,23 @@ export class PlayerService {
     @InjectModel('Player') private readonly playerModel: Model<Player>,
   ) {}
 
-  async create(user: Doc<User>, lobbyId: string): Promise<Doc<Player>> {
+  async create(
+    user: Doc<User>,
+    lobby: Doc<Lobby>,
+    map: Doc<Map>,
+  ): Promise<Doc<Player>> {
+    let startingMoney = map.configuration.starting.money;
+    if (lobby.turnCount !== lobby.turnCountMax) {
+      const missingTurn = lobby.turnCountMax - lobby.turnCount;
+      startingMoney += missingTurn * map.configuration.salary * 2;
+    }
     const player = {
       user: user.id,
       nickname: user.nickname,
       pp: user.pp,
-      lobby: lobbyId,
+      lobby: lobby.id,
+      money: startingMoney,
+      rating: map.configuration.starting.rating,
     };
     const playerTmp = await this.playerModel.create(player);
     return playerTmp;

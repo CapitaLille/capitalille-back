@@ -266,7 +266,7 @@ export class SchedulerService {
           {
             turnPlayed: false,
             actionPlayed: false,
-            bonuses: { $pull: { $in: [playerVaultType.casino_temp] } },
+            $pull: { bonuses: playerVaultType.casino_temp },
           },
           this.serverGateway.getServer(),
         );

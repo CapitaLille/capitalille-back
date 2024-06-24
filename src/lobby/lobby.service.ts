@@ -44,7 +44,7 @@ export class LobbyService {
       if (!users.includes(ownerId)) {
         users.push(ownerId);
       }
-      const newLobby = new this.lobbyModel({
+      const lobby = new this.lobbyModel({
         _id: newLobbyId,
         owner: ownerId,
         users: users,
@@ -64,13 +64,16 @@ export class LobbyService {
         throw new NotFoundException('Map not found');
       }
 
+      const newLobby = await lobby.save();
+
       const operations = [];
       const owner = await this.userService.findByIdAndUpdate(ownerId, {
-        $push: { lobbies: newLobbyId },
+        $push: { lobbies: newLobby.id },
       });
 
       // Créez le joueur du propriétaire.
-      operations.push(this.playerService.create(owner, newLobbyId.toString()));
+
+      operations.push(this.playerService.create(owner, newLobby, map));
       for (let i = 0; i < createLobbyDto.users.length; i++) {
         // Envoyez une notification à chaque utilisateur.
         if (createLobbyDto.users[i] !== ownerId) {
@@ -78,7 +81,7 @@ export class LobbyService {
             this.userService.pushNotification({
               from: ownerId,
               to: createLobbyDto.users[i],
-              attached: newLobbyId.toString(),
+              attached: newLobby.id,
               type: 'gameInvite',
             }),
           );
@@ -91,12 +94,11 @@ export class LobbyService {
         map: map,
       };
       await Promise.all(operations);
-      const newL = await newLobby.save();
       await this.userService.statisticsUpdate(
         ownerId,
         AchievementType.gameCreator,
       );
-      lobbyId = newL.id;
+      lobbyId = newLobby.id;
       await this.houseService.generateLobbyHouses(createLobbyHousesDto),
         await session.commitTransaction();
     } catch (error) {
@@ -184,7 +186,8 @@ export class LobbyService {
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
-      const player = await this.playerService.create(user, lobbyId);
+      const map = await this.mapService.findOne(lobby.map);
+      const player = await this.playerService.create(user, lobby, map);
       if (!user.lobbies.includes(lobbyId)) {
         await this.userService.findByIdAndUpdate(userId, {
           $push: { lobbies: lobbyId },
