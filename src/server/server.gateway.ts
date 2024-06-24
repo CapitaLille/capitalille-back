@@ -12,7 +12,7 @@ import {
 import { ServerGuard } from './server.guard';
 import { Socket } from 'socket.io';
 import { Server } from 'socket.io';
-import { GameEvent } from './server.type';
+import { GameEvent, InfoSocket } from './server.type';
 import { HouseService } from 'src/house/house.service';
 import { PlayerService } from 'src/player/player.service';
 import { MapService } from 'src/map/map.service';
@@ -25,6 +25,8 @@ import { CaseType } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
 import { AchievementType } from 'src/user/user.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
+import { hammer } from 'src/ion-icon';
+import { ANSWER } from './server.response';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -390,7 +392,7 @@ export class ServerGateway
         socket,
         async (lobby, player, map) => {
           if (map.cases[player.casePosition].type !== CaseType.METRO) {
-            throw new ForbiddenException('Player is not on a metro case');
+            throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (player.actionPlayed) {
             throw new ForbiddenException('Player already played his action');
@@ -598,7 +600,6 @@ export class ServerGateway
             player.id,
             socket,
           );
-          await socket.emit(GameEvent.HOUSE_REPAIR);
         },
         true,
         true,
@@ -711,7 +712,6 @@ export class ServerGateway
             player.id,
             socket,
           );
-          await socket.emit(GameEvent.MONUMENTS_PAID);
         },
       );
     } catch (error) {

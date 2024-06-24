@@ -32,7 +32,13 @@ import {
 import { Server } from 'socket.io';
 import { PlayerService } from 'src/player/player.service';
 import { ServerGateway, ServerGuardSocket } from './server.gateway';
-import { Bank, Doc, GameEvent, PlayerSocketId } from './server.type';
+import {
+  Bank,
+  Doc,
+  GameEvent,
+  InfoSocket,
+  PlayerSocketId,
+} from './server.type';
 import { House, houseState } from 'src/house/house.schema';
 import { nanoid } from 'nanoid';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -43,6 +49,18 @@ import {
   AchievementLevel,
   AchievementType,
 } from 'src/user/user.schema';
+import {
+  build,
+  checkmark,
+  close,
+  hammer,
+  handLeft,
+  paperPlane,
+  ticket,
+  trophy,
+} from 'src/ion-icon';
+import { response } from 'express';
+import { ANSWER } from './server.response';
 
 export interface extendedCase extends Case {
   index: number;
@@ -659,7 +677,7 @@ export class ServerService {
         break;
       case PlayerEvent.BUS_PAY:
         if (player.money < map.configuration.busPrice) {
-          socket.emit(GameEvent.NOT_ENOUGH_MONEY);
+          socket.emit(ANSWER().NOT_ENOUGH_MONEY);
           throw new ForbiddenException('Not enough money');
         }
         await this.playerMoneyTransaction(
@@ -673,10 +691,15 @@ export class ServerService {
           },
         );
         await this.teleportPlayer(player.id, socket);
+        const InfoBus: InfoSocket = {
+          icon: ticket,
+          message: 'Vous avez pris le bus.',
+          title: 'Ticket payé',
+        };
+        socket.emit(GameEvent.INFO, InfoBus);
         break;
       case PlayerEvent.METRO_PAY:
         if (player.money < map.configuration.metroPrice) {
-          socket.emit(GameEvent.NOT_ENOUGH_MONEY);
           throw new ForbiddenException('Not enough money');
         }
         await this.playerMoneyTransaction(
@@ -690,6 +713,12 @@ export class ServerService {
           },
         );
         await this.teleportPlayer(player.id, socket);
+        const InfoMetro: InfoSocket = {
+          icon: ticket,
+          message: 'Vous avez pris le métro.',
+          title: 'Ticket payé',
+        };
+        socket.emit(GameEvent.INFO, InfoMetro);
         break;
       case PlayerEvent.HOUSE_RENT_PAY:
         await this.houseRent(player, attachedId as number, map, socket, false);
@@ -807,16 +836,21 @@ export class ServerService {
         this.serverGateway.getServer(),
       ),
     );
+    const auctionSetInfo: InfoSocket = {
+      icon: checkmark,
+      message: ANSWER(newAuction).AUCTION_SET,
+      title: 'Enchère remportée',
+    };
+    const auctionUnsetInfo: InfoSocket = {
+      icon: close,
+      message: ANSWER(map.houses[house.index].name, player.nickname)
+        .AUCTION_SURPASSED,
+      title: 'Enchère dépassée',
+    };
     promises.push(
-      socket.to(targetSocketId).emit(GameEvent.AUCTION_EXIT, {
-        message: 'Votre enchère a été dépassée.',
-      }),
+      socket.to(targetSocketId).emit(GameEvent.INFO, auctionUnsetInfo),
     );
-    promises.push(
-      socket.to(lobby.id).emit(GameEvent.AUCTION_SET, {
-        message: 'Votre enchère a été prise en compte.',
-      }),
-    );
+    promises.push(socket.emit(GameEvent.INFO, auctionSetInfo));
     promises.push(
       this.userService.statisticsUpdate(
         player.user,
@@ -846,7 +880,12 @@ export class ServerService {
     const targetSocketId = await this.getSocketId(player.id);
     if (random < chance) {
       const money = (1 / chance) * value;
-      await socket.to(targetSocketId).emit(GameEvent.CASINO_WIN);
+      const winInfo: InfoSocket = {
+        icon: trophy,
+        message: 'Vous avez gagné ' + money + '.',
+        title: 'Casino',
+      };
+      await socket.to(targetSocketId).emit(GameEvent.INFO, winInfo);
       await this.playerMoneyTransaction(
         money,
         Bank.id,
@@ -858,7 +897,12 @@ export class ServerService {
         },
       );
     } else {
-      await socket.to(targetSocketId).emit(GameEvent.CASINO_LOST);
+      const lostInfo: InfoSocket = {
+        icon: close,
+        message: ANSWER(value).CASINO_LOOSE,
+        title: 'Casino',
+      };
+      await socket.to(targetSocketId).emit(GameEvent.INFO, lostInfo);
     }
     await this.userService.statisticsUpdate(
       player.user,
@@ -877,11 +921,10 @@ export class ServerService {
       }
     });
     if (!monument) {
-      throw new NotFoundException("Vous n'êtes pas sur un monument");
+      throw new NotFoundException(ANSWER().NOT_ON_THE_CASE);
     }
     if (player.money < monument.price) {
-      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
-      throw new ForbiddenException("Vous n'avez pas assez d'argent");
+      throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
     }
     await this.playerMoneyTransaction(
       monument.price,
@@ -905,7 +948,12 @@ export class ServerService {
       player.user,
       AchievementType.monumentsRestorer,
     );
-    socket.emit(GameEvent.MONUMENTS_PAID, { bonus: monument.bonus });
+    const MetroInfo: InfoSocket = {
+      icon: build,
+      message: 'Vous avez gagné ' + monument.bonus + ' points de réputation.',
+      title: 'Monument restauré',
+    };
+    socket.emit(GameEvent.INFO, MetroInfo);
   }
 
   async houseRent(
@@ -967,12 +1015,20 @@ export class ServerService {
     const cops = map.configuration.copsMalus;
     await this.playerRatingTransaction(-cops, targetPlayerId, socket);
     const targetSocketId = await this.getSocketId(targetPlayerId);
-    await socket.to(targetSocketId).emit(GameEvent.COPS_DONE, {
-      message: 'Vous avez été dénoncé aux flics.',
-    });
-    await socket.emit(GameEvent.COPS_DONE, {
-      message: 'Votre plainte a été prise en compte.',
-    });
+    const targetPlayer = await this.playerService.findOneById(targetPlayerId);
+    const fromPlayer = await this.playerService.findOneById(sourcePlayerId);
+    const InfoCopsTarget: InfoSocket = {
+      icon: handLeft,
+      message: 'Vous avez été dénoncé aux flics par ' + fromPlayer.nickname,
+      title: 'Plainte déposée',
+    };
+    await socket.to(targetSocketId).emit(GameEvent.INFO, InfoCopsTarget);
+    const InfoCopsFrom: InfoSocket = {
+      icon: paperPlane,
+      message: 'Vous avez dénoncé ' + targetPlayer.nickname + ' aux flics.',
+      title: 'Plainte déposée',
+    };
+    await socket.emit(GameEvent.INFO, InfoCopsFrom);
     await this.playerService.generateTransaction(
       targetPlayerId,
       sourcePlayerId,
@@ -994,8 +1050,7 @@ export class ServerService {
     socket: ServerGuardSocket,
   ) {
     if (player.money < map.configuration.school.cost) {
-      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
-      throw new ForbiddenException('Not enough money');
+      throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
     }
     await this.playerMoneyTransaction(
       map.configuration.school.cost,
@@ -1062,8 +1117,7 @@ export class ServerService {
   ) {
     const house = await this.houseService.findOne(player.lobby, houseIndex);
     if (player.money < map.configuration.repairCost) {
-      socket.emit(GameEvent.NOT_ENOUGH_MONEY);
-      throw new ForbiddenException('Not enough money');
+      throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
     }
     await this.playerMoneyTransaction(
       map.configuration.repairCost,
@@ -1086,6 +1140,12 @@ export class ServerService {
       },
       this.serverGateway.getServer(),
     );
+    const repairInfo: InfoSocket = {
+      icon: hammer,
+      message: ANSWER(map.configuration.repairCost).HOUSE_REPAIR,
+      title: 'Réparation efféctuée',
+    };
+    await socket.emit(GameEvent.INFO, repairInfo);
   }
 
   /**
