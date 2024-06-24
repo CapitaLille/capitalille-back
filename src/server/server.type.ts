@@ -79,3 +79,32 @@ export const publicServer = {
   turnSchedule: [120, 240, 2 * 3600, 4 * 3600, 6 * 3600, 12 * 3600, 24 * 3600],
   turnCountMax: [30, 30, 60, 90, 90, 90, 90],
 };
+
+export const PRICE = (price: number, extend: boolean = false): string => {
+  if (price === undefined || price === null) return '~~';
+  if (price < 0) {
+    return '-' + PRICE(-price, extend);
+  }
+  if (!extend) {
+    if (price >= 1000000) {
+      // 300 000 000 to 300.0M, 1 200 000 to 1.2M, 294 000 000 to 294.0M
+      return (price / 1000000).toFixed(1) + 'M';
+    }
+    if (price >= 1000) {
+      // 100 000 to 100K, 1200 to 1.2K, 294 000 to 294K not 294.0K
+      if (price % 1000 === 0) {
+        return (price / 1000).toFixed(0) + 'K';
+      }
+      return (price / 1000).toFixed(1) + 'K';
+    } else {
+      return price.toString();
+    }
+  } else {
+    if (price >= 1000000) {
+      // 1200000 to 1,200,000
+      return price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    //100000 to 100,000
+    return price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+};
