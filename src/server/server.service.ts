@@ -1123,7 +1123,8 @@ export class ServerService {
       throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
     }
     await this.playerMoneyTransaction(
-      map.configuration.repairCost,
+      map.configuration.repairCost *
+        this.playerService.ratingMultiplicator(player, map),
       player.id,
       Bank.id,
       moneyTransactionType.REPAIR,
