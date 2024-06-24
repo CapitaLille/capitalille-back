@@ -319,7 +319,7 @@ export class ServerGateway
             throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (player.actionPlayed) {
-            throw new ForbiddenException(ANSWER().);
+            throw new ForbiddenException(ANSWER().ALREADY_PLAYED_ACTION);
           }
           await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_FRAUD,
@@ -363,7 +363,7 @@ export class ServerGateway
             throw new ForbiddenException(ANSWER().NOT_ON_THE_CASE);
           }
           if (player.actionPlayed) {
-            throw new ForbiddenException(ANSWER().ALREADY_PLAED_ACTION);
+            throw new ForbiddenException(ANSWER().ALREADY_PLAYED_ACTION);
           }
           await this.serverService.playerAction(
             PlayerEvent.HOUSE_RENT_PAY,

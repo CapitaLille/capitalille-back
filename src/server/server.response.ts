@@ -3,7 +3,7 @@ export const ANSWER = (
   message2: string | number = '',
 ) => {
   return {
-    ALREADY_PLAED_ACTION: 'Vous avez déjà effectué une action ce tour.',
+    ALREADY_PLAYED_ACTION: 'Vous avez déjà effectué une action ce tour.',
 
     NOT_ENOUGH_MONEY: "Vous n'avez pas assez d'argent.",
     NOT_ON_THE_CASE:
