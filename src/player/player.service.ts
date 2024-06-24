@@ -230,6 +230,7 @@ export class PlayerService {
     amount: number,
     type: moneyTransactionType | ratingTransactionType,
     Server: Server,
+    generateTransactionForTarget: boolean = true,
   ) {
     try {
       if (fromPlayerId === '' || targetPlayerId === '') {
@@ -252,7 +253,7 @@ export class PlayerService {
           Server,
         );
       }
-      if (targetPlayerId !== Bank.id) {
+      if (targetPlayerId !== Bank.id && generateTransactionForTarget) {
         const toTransaction = this.createTransaction(
           targetPlayerId,
           fromPlayerId,

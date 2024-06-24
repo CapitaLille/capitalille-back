@@ -32,15 +32,7 @@ import {
 import { Server } from 'socket.io';
 import { PlayerService } from 'src/player/player.service';
 import { ServerGateway, ServerGuardSocket } from './server.gateway';
-import {
-  AuctionData,
-  Bank,
-  Doc,
-  GameEvent,
-  MoneyChangeData,
-  PlayerSocketId,
-  RatingChangeData,
-} from './server.type';
+import { Bank, Doc, GameEvent, PlayerSocketId } from './server.type';
 import { House, houseState } from 'src/house/house.schema';
 import { nanoid } from 'nanoid';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -528,18 +520,6 @@ export class ServerService {
     if (newRating > 5) {
       newRating = 5;
     }
-    const targetSocketId = await this.getSocketId(player.id);
-    await socket
-      .to(targetSocketId)
-      .emit(
-        GameEvent.RATING_CHANGE,
-        new RatingChangeData(
-          amount > 0 ? Bank.id : player.id,
-          amount > 0 ? player.id : Bank.id,
-          amount,
-          ratingTransactionType.MONUMENTS_RATING,
-        ),
-      );
     return await this.playerService.findByIdAndUpdate(
       player.id,
       {
@@ -828,20 +808,14 @@ export class ServerService {
       ),
     );
     promises.push(
-      socket
-        .to(targetSocketId)
-        .emit(
-          GameEvent.AUCTION_EXIT,
-          new AuctionData(houseIndex, player.id, newAuction),
-        ),
+      socket.to(targetSocketId).emit(GameEvent.AUCTION_EXIT, {
+        message: 'Votre enchère a été dépassée.',
+      }),
     );
     promises.push(
-      socket
-        .to(lobby.id)
-        .emit(
-          GameEvent.AUCTION_SET,
-          new AuctionData(houseIndex, player.user, newAuction),
-        ),
+      socket.to(lobby.id).emit(GameEvent.AUCTION_SET, {
+        message: 'Votre enchère a été prise en compte.',
+      }),
     );
     promises.push(
       this.userService.statisticsUpdate(
@@ -993,23 +967,19 @@ export class ServerService {
     const cops = map.configuration.copsMalus;
     await this.playerRatingTransaction(-cops, targetPlayerId, socket);
     const targetSocketId = await this.getSocketId(targetPlayerId);
-    await socket
-      .to(targetSocketId)
-      .emit(
-        GameEvent.RATING_CHANGE,
-        new RatingChangeData(
-          sourcePlayerId,
-          targetPlayerId,
-          cops,
-          ratingTransactionType.COPS_RATING,
-        ),
-      );
+    await socket.to(targetSocketId).emit(GameEvent.COPS_DONE, {
+      message: 'Vous avez été dénoncé aux flics.',
+    });
+    await socket.emit(GameEvent.COPS_DONE, {
+      message: 'Votre plainte a été prise en compte.',
+    });
     await this.playerService.generateTransaction(
-      sourcePlayerId,
       targetPlayerId,
+      sourcePlayerId,
       cops,
       ratingTransactionType.COPS_RATING,
       this.serverGateway.getServer(),
+      false,
     );
     const sourcePlayer = await this.playerService.findOneById(sourcePlayerId);
     await this.userService.statisticsUpdate(

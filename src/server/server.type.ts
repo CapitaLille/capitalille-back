@@ -42,6 +42,7 @@ export enum GameEvent {
   MONUMENTS_REQUEST = 'monumentsRequest', // Request to visit the monuments or pass.
   MONUMENTS_PAID = 'monumentsPaid', // Monuments visited. Pay the monuments.
   COPS_REQUEST = 'copsRequest', // Request to pay the cops or pass.
+  COPS_DONE = 'copsDone', // Pay the cops. Lose reputation.
   SCHOOL_REQUEST = 'schoolRequest', // Request to pay the school or pass.
 }
 
@@ -66,36 +67,6 @@ export class MoneyChangeData {
     this.to = to;
     this.amount = amount;
     this.type = type;
-  }
-}
-
-export class RatingChangeData {
-  from: string | 'bank';
-  to: string | 'bank';
-  amount: number;
-  type: ratingTransactionType;
-
-  constructor(
-    from: string,
-    to: string,
-    amount: number,
-    type: ratingTransactionType,
-  ) {
-    this.from = from;
-    this.to = to;
-    this.amount = amount;
-    this.type = type;
-  }
-}
-
-export class AuctionData {
-  houseIndex: number;
-  playerId: string;
-  newAuction: number;
-  constructor(houseIndex: number, playerId: string, newAuction: number) {
-    this.houseIndex = houseIndex;
-    this.playerId = playerId;
-    this.newAuction = newAuction;
   }
 }
 
