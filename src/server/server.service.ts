@@ -931,6 +931,7 @@ export class ServerService {
       player.user,
       AchievementType.monumentsRestorer,
     );
+    socket.emit(GameEvent.MONUMENTS_PAID, { bonus: monument.bonus });
   }
 
   async houseRent(

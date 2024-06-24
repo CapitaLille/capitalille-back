@@ -474,7 +474,9 @@ export class ServerGateway
         socket,
         async (lobby, player, map) => {
           if (map.cases[player.casePosition].type !== CaseType.COPS) {
-            throw new ForbiddenException('Player is not on a cops case');
+            throw new ForbiddenException(
+              "Vous n'êtes pas sur une case police.",
+            );
           }
           await this.serverService.playerAction(
             PlayerEvent.COPS_COMPLAINT,
@@ -485,6 +487,7 @@ export class ServerGateway
         },
       );
     } catch (error) {
+      console.log('Cops complaint error', error.message);
       socket.emit(GameEvent.ERROR, { message: error.message });
     }
   }
@@ -526,21 +529,26 @@ export class ServerGateway
   ) {
     const userId = socket.handshake.user.sub;
     try {
+      console.log('Casino gamble', data.lobbyId, userId);
       await this.serverService.gameSession(
         data.lobbyId,
         userId,
         socket,
         async (lobby, player, map) => {
           if (map.cases[player.casePosition].type !== CaseType.EVENT) {
-            throw new ForbiddenException('Player is not on a casino case');
+            throw new ForbiddenException(
+              "Vous n'êtes pas sur une case casino.",
+            );
           }
           if (!player.bonuses.includes(playerVaultType.casino_temp)) {
             throw new ForbiddenException(
-              'Player does not have the casino bonus',
+              'Vous ne pouvez pas parier au casino en ce moment.',
             );
           }
           if (player.actionPlayed) {
-            throw new ForbiddenException('Player already played his action');
+            throw new ForbiddenException(
+              'Vous avez déjà joué votre action de tour.',
+            );
           }
           await this.serverService.playerAction(
             PlayerEvent.CASINO_GAMBLE,

@@ -84,7 +84,7 @@ export class SchedulerService {
 
   async getDelay(lobbyId: string) {
     const lobby = await this.lobbyService.findOne(lobbyId);
-    const { id, startTime, turnSchedule, turnCount } = lobby;
+    const { startTime, turnSchedule, turnCount } = lobby;
     if (turnCount <= 0) {
       return 0;
     }
@@ -107,7 +107,7 @@ export class SchedulerService {
 
   async scheduleNextTurnForLobby(lobbyId: string, socket: Server) {
     const lobby = await this.lobbyService.findOne(lobbyId);
-    const { id, startTime, turnSchedule, turnCount } = lobby;
+    const { startTime, turnSchedule, turnCount } = lobby;
     if (turnCount <= 0) {
       return;
     }
@@ -128,9 +128,9 @@ export class SchedulerService {
     }
 
     if (nextTurnTime) {
-      const jobName = `lobby_${id}_next_turn_${nextTurnIndex}`;
+      const jobName = `lobby_${lobby.id}_next_turn_${nextTurnIndex}`;
       console.log(
-        `Lobby ${id}, Next turn scheduled: ${nextTurnTime.toISOString()}`,
+        `Lobby ${lobby.id}, Next turn scheduled: ${nextTurnTime.toISOString()}`,
       );
       socket.in(lobby.id).emit(GameEvent.NEXT_TURN, {
         delay: nextTurnTime.getTime() - new Date().getTime(),
