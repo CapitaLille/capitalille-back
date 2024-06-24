@@ -772,7 +772,8 @@ export class ServerService {
     if (
       !nearestCases.some((element) =>
         map.houses[houseIndex].cases.includes(element),
-      )
+      ) &&
+      house.state !== houseState.SALE
     ) {
       socket.emit(GameEvent.ERROR, {
         message: 'House is too far away',
