@@ -473,11 +473,11 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          if (map.cases[player.casePosition].type !== CaseType.COPS) {
-            throw new ForbiddenException(
-              "Vous n'êtes pas sur une case police.",
-            );
-          }
+          // if (map.cases[player.casePosition].type !== CaseType.COPS) {
+          //   throw new ForbiddenException(
+          //     "Vous n'êtes pas sur une case police.",
+          //   );
+          // }
           await this.serverService.playerAction(
             PlayerEvent.COPS_COMPLAINT,
             data.targetPlayerId,
@@ -505,9 +505,9 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          if (map.cases[player.casePosition].type !== CaseType.SCHOOL) {
-            throw new ForbiddenException('Player is not on a school case');
-          }
+          // if (map.cases[player.casePosition].type !== CaseType.SCHOOL) {
+          //   throw new ForbiddenException('Player is not on a school case');
+          // }
           await this.serverService.playerAction(
             PlayerEvent.SCHOOL_PAY,
             undefined,
@@ -535,21 +535,21 @@ export class ServerGateway
         userId,
         socket,
         async (lobby, player, map) => {
-          if (map.cases[player.casePosition].type !== CaseType.EVENT) {
-            throw new ForbiddenException(
-              "Vous n'êtes pas sur une case casino.",
-            );
-          }
-          if (!player.bonuses.includes(playerVaultType.casino_temp)) {
-            throw new ForbiddenException(
-              'Vous ne pouvez pas parier au casino en ce moment.',
-            );
-          }
-          if (player.actionPlayed) {
-            throw new ForbiddenException(
-              'Vous avez déjà joué votre action de tour.',
-            );
-          }
+          // if (map.cases[player.casePosition].type !== CaseType.EVENT) {
+          //   throw new ForbiddenException(
+          //     "Vous n'êtes pas sur une case casino.",
+          //   );
+          // }
+          // if (!player.bonuses.includes(playerVaultType.casino_temp)) {
+          //   throw new ForbiddenException(
+          //     'Vous ne pouvez pas parier au casino en ce moment.',
+          //   );
+          // }
+          // if (player.actionPlayed) {
+          //   throw new ForbiddenException(
+          //     'Vous avez déjà joué votre action de tour.',
+          //   );
+          // }
           await this.serverService.playerAction(
             PlayerEvent.CASINO_GAMBLE,
             undefined,
@@ -700,11 +700,11 @@ export class ServerGateway
           const monument = map.monuments.find((monument) => {
             monument.cases.includes(player.casePosition);
           });
-          if (!monument) {
-            throw new ForbiddenException(
-              "Vous n'êtes pas sur une case monument.",
-            );
-          }
+          // if (!monument) {
+          //   throw new ForbiddenException(
+          //     "Vous n'êtes pas sur une case monument.",
+          //   );
+          // }
           await this.serverService.playerAction(
             PlayerEvent.MONUMENTS_PAY,
             undefined,
