@@ -1123,7 +1123,7 @@ export class ServerService {
       throw new ForbiddenException(ANSWER().NOT_ENOUGH_MONEY);
     }
     await this.playerMoneyTransaction(
-      map.configuration.repairCost *
+      map.configuration.repairCost /
         this.playerService.ratingMultiplicator(player, map),
       player.id,
       Bank.id,
@@ -1166,6 +1166,9 @@ export class ServerService {
     socket: ServerGuardSocket,
   ) {
     const house = await this.houseService.findOne(player.lobby, houseIndex);
+    const cost =
+      this.playerService.ratingMultiplicator(player, map) *
+      house.price[house.level + 1];
     if (house.level === 3) {
       throw new ForbiddenException('La maison est déjà au niveau maximum.');
     }
@@ -1174,11 +1177,11 @@ export class ServerService {
         'La maisons a déjà été améliorée pendant ce tour.',
       );
     }
-    if (player.money < house.price[house.level + 1]) {
+    if (player.money < cost) {
       throw new ForbiddenException("Pas assez d'argent");
     }
     await this.playerMoneyTransaction(
-      house.price[house.level + 1],
+      cost,
       player.id,
       Bank.id,
       moneyTransactionType.UPGRADE_HOUSE,
