@@ -33,6 +33,8 @@ export enum GameEvent {
   MONUMENTS_REQUEST = 'monumentsRequest', // Request to visit the monuments or pass.
   COPS_REQUEST = 'copsRequest', // Request to pay the cops or pass.
   SCHOOL_REQUEST = 'schoolRequest', // Request to pay the school or pass.
+  NEW_MESSAGE = 'newMessage',
+  GET_CONVERSATIONS = 'getConversations',
 }
 
 export interface PlayerSocketId {

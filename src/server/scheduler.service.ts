@@ -323,6 +323,24 @@ export class SchedulerService {
             this.serverGateway.getServer(),
           ),
         );
+        promises.push(
+          this.playerService.findByIdAndUpdate(
+            owner,
+            {
+              $pull: { houses: house.index },
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
+        promises.push(
+          this.playerService.findByIdAndUpdate(
+            nextOwner,
+            {
+              $push: { houses: house.index },
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
         await Promise.all(promises);
       }
       if (house.state === houseState.FREE && house.nextOwner !== '') {
@@ -352,6 +370,15 @@ export class SchedulerService {
               nextOwner: '',
               auction: 0,
               state: houseState.OWNED,
+            },
+            this.serverGateway.getServer(),
+          ),
+        );
+        promises.push(
+          this.playerService.findByIdAndUpdate(
+            nextOwner,
+            {
+              $push: { houses: house.index },
             },
             this.serverGateway.getServer(),
           ),

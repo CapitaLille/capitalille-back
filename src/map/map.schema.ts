@@ -44,6 +44,9 @@ export class Case {
   nextStationCaseIndex: number;
 
   @Prop({ required: false })
+  stationName: string;
+
+  @Prop({ required: false })
   linkedHouseIndex: number;
 }
 

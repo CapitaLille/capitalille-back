@@ -221,6 +221,7 @@ export class ServerService {
         last: tmpCase.last,
         nextStationCaseIndex: tmpCase.nextStationCaseIndex,
         linkedHouseIndex: tmpCase.linkedHouseIndex,
+        stationName: tmpCase.stationName,
         type: tmpCase.type,
         index: index,
       });

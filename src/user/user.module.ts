@@ -17,6 +17,8 @@ import { ConfigService } from '@nestjs/config';
 import { ConstantsService } from './constants';
 import { PlayerService } from 'src/player/player.service';
 import { PlayerSchema } from 'src/player/player.schema';
+import { HistoryService } from 'src/history/history.service';
+import { HistorySchema } from 'src/history/history.schema';
 
 @Module({
   controllers: [UserController],
@@ -28,11 +30,13 @@ import { PlayerSchema } from 'src/player/player.schema';
     FilesAzureService,
     ConstantsService,
     ConfigService,
+    HistoryService,
   ],
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     MongooseModule.forFeature([{ name: 'Lobby', schema: LobbySchema }]),
     MongooseModule.forFeature([{ name: 'Player', schema: PlayerSchema }]),
+    MongooseModule.forFeature([{ name: 'History', schema: HistorySchema }]),
     PlayerModule,
     MapModule,
     HouseModule,

@@ -52,6 +52,8 @@ export enum PlayerEvent {
   SCHOOL_PAY = 'schoolRequest',
   CASINO_GAMBLE = 'casinoRequest',
   REPAIR_HOUSE = 'repairHouse',
+  SEND_MESSAGE = 'sendMessage',
+  GET_CONVERSATIONS = 'getConversations',
 }
 
 @Schema()

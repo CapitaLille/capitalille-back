@@ -19,7 +19,7 @@ import { MapService } from 'src/map/map.service';
 import { InjectConnection } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { ServerService } from './server.service';
-import { PlayerEvent, playerVaultType } from 'src/player/player.schema';
+import { PlayerEvent } from 'src/player/player.schema';
 import { SchedulerService } from './scheduler.service';
 import { CaseType } from 'src/map/map.schema';
 import { UserService } from 'src/user/user.service';
@@ -27,6 +27,8 @@ import { AchievementType } from 'src/user/user.schema';
 import { LobbyService } from 'src/lobby/lobby.service';
 import { hammer } from 'src/ion-icon';
 import { ANSWER } from './server.response';
+import { Message } from 'src/conversation/conversation.schema';
+import { ConversationService } from 'src/conversation/conversation.service';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -49,6 +51,7 @@ export class ServerGateway
     private readonly playerService: PlayerService,
     private readonly serverService: ServerService,
     private readonly lobbyService: LobbyService,
+    private readonly conversationService: ConversationService,
     private readonly mapService: MapService,
     private readonly userService: UserService,
     private readonly schedulerService: SchedulerService,
@@ -57,14 +60,14 @@ export class ServerGateway
   @WebSocketServer() server: Server;
 
   async afterInit(server: Server) {
-    const finishedLobbies = await this.lobbyService.findAllFinished();
-    finishedLobbies.forEach((lobby) => {
-      console.log('Schedule delete lobby', lobby.id);
-      this.schedulerService.scheduleDeleteLobby(lobby.id);
-    });
+    // const finishedLobbies = await this.lobbyService.findAllFinished();
+    // finishedLobbies.forEach((lobby) => {
+    //   console.log('Schedule delete lobby', lobby.id);
+    //   this.schedulerService.scheduleDeleteLobby(lobby.id);
+    // });
 
-    this.schedulerService.scheduleLobbies(server);
-    this.schedulerService.launchPublicLobbies();
+    // this.schedulerService.scheduleLobbies(server);
+    // this.schedulerService.launchPublicLobbies();
     // console.warn('Comment this line to enable scheduler');
     console.log('Server initialized');
   }
@@ -713,6 +716,77 @@ export class ServerGateway
           );
         },
       );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.SEND_MESSAGE)
+  async sendMessage(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody()
+    data: { lobbyId: string; targetId: string; message: Message },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      await this.serverService.gameSession(
+        data.lobbyId,
+        userId,
+        socket,
+        async (lobby, player, map) => {
+          const targetPlayer = await this.playerService.findOneById(
+            data.targetId,
+          );
+          console.log('Target player', targetPlayer.nickname);
+          if (!targetPlayer) {
+            throw new ForbiddenException("Le joueur n'existe pas.");
+          }
+          const sourceSocketId = await this.serverService.getSocketId(
+            player.id,
+          );
+          const targetSocketId = await this.serverService.getSocketId(
+            targetPlayer.id,
+          );
+          const server = await this.getServer();
+          await this.conversationService.sendMessage(
+            lobby,
+            player,
+            sourceSocketId,
+            targetPlayer,
+            targetSocketId,
+            data.message,
+            server,
+          );
+        },
+        true,
+        false,
+        false,
+      );
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.GET_CONVERSATIONS)
+  async getConversations(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody() data: { page: number; lobbyId: string },
+  ) {
+    const userId = socket.handshake.user.sub;
+    try {
+      console.log('Get conversations', data.lobbyId, userId);
+      const player = await this.playerService.findOneByUserId(
+        userId,
+        data.lobbyId,
+      );
+      const targetSocketId = await this.serverService.getSocketId(player.id);
+      const conversations = await this.conversationService.findByPlayerId(
+        player.id,
+      );
+      console.log('Conversations', conversations);
+      socket.emit(GameEvent.GET_CONVERSATIONS, { conversations });
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
     }

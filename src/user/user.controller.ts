@@ -18,10 +18,14 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClaimAchievementDto } from './dto/claim-achievement.dto';
 import { SearchUserDto } from './dto/search-user.dto';
+import { HistoryService } from 'src/history/history.service';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly historyService: HistoryService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard)
@@ -78,6 +82,13 @@ export class UserController {
     return await this.userService.findOne(id);
   }
 
+  @Get('/history')
+  @UseGuards(AuthGuard)
+  async findHistory(@Request() req) {
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.historyService.findFromUser(req.user.data.sub);
+  }
+
   @Patch('')
   @UseGuards(AuthGuard)
   async update(@Request() req, @Body() updateUserDto: UpdateUserDto) {
@@ -127,6 +138,13 @@ export class UserController {
   async getFriends(@Request() req) {
     if (!req.user.data.sub) throw new BadRequestException('No UID provided');
     return await this.userService.getFriends(req.user.data.sub);
+  }
+
+  @Get(':id/friends')
+  @UseGuards(AuthGuard)
+  async getFriendsFromUser(@Request() req, @Param('id') targetId: string) {
+    if (!targetId) throw new BadRequestException('No UID provided');
+    return await this.userService.getFriends(targetId);
   }
 
   @Post('notification/:notif_id')

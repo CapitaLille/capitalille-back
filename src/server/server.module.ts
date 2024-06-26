@@ -21,6 +21,8 @@ import { ConstantsService } from 'src/user/constants';
 import { ExecutionManagementService } from './execution.service';
 import { HistoryService } from 'src/history/history.service';
 import { HistorySchema } from 'src/history/history.schema';
+import { ConversationService } from 'src/conversation/conversation.service';
+import { ConversationSchema } from 'src/conversation/conversation.schema';
 
 @Module({
   providers: [
@@ -30,6 +32,7 @@ import { HistorySchema } from 'src/history/history.schema';
     UserService,
     ConstantsService,
     LobbyService,
+    ConversationService,
     PlayerService,
     SchedulerService,
     HistoryService,
@@ -46,6 +49,9 @@ import { HistorySchema } from 'src/history/history.schema';
     MongooseModule.forFeature([{ name: 'Map', schema: MapSchema }]),
     MongooseModule.forFeature([{ name: 'House', schema: HouseSchema }]),
     MongooseModule.forFeature([{ name: 'History', schema: HistorySchema }]),
+    MongooseModule.forFeature([
+      { name: 'Conversation', schema: ConversationSchema },
+    ]),
 
     ServerModule,
     JwtModule.registerAsync({

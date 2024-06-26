@@ -14,51 +14,6 @@ export class HistoryService {
     @InjectModel('History') private readonly historyModel: Model<History>,
   ) {}
 
-  // @Schema()
-  // export class History {
-  //   @Prop({ required: true })
-  //   lobby: string;
-
-  //   @Prop({ required: true })
-  //   mapName: string;
-
-  //   @Prop({ required: true })
-  //   players: PlayerHistory[];
-
-  //   @Prop({ required: true })
-  //   turnCount: number;
-
-  //   @Prop({ required: true })
-  //   turnSchedule: string;
-
-  //   @Prop({ required: true })
-  //   date: Date;
-  // }
-
-  // @Schema()
-  // export class PlayerHistory {
-  //   @Prop({ required: true })
-  //   user: string;
-
-  //   @Prop({ required: true })
-  //   houseCount: string;
-
-  //   @Prop({ required: true })
-  //   hostelCount: string;
-
-  //   @Prop({ required: true })
-  //   transactionCount: string;
-
-  //   @Prop({ required: true })
-  //   moneyCount: string;
-
-  //   @Prop({ required: true })
-  //   rank: number;
-
-  //   @Prop({ required: true })
-  //   trophyCount: string;
-  // }
-
   async create(
     players: Doc<Player>[],
     lobby: Doc<Lobby>,
@@ -125,5 +80,9 @@ export class HistoryService {
         end: new Date(),
       });
     }
+  }
+
+  async findFromUser(userId: string) {
+    return await this.historyModel.find({ 'players.user': userId });
   }
 }
