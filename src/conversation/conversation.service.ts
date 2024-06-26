@@ -43,18 +43,11 @@ export class ConversationService {
       sourcePlayer.id,
       targetPlayer.id,
     ]);
-    console.log(
-      'sourcePlayer',
-      sourcePlayer.id,
-      'targetPlayer',
-      targetPlayer.id,
-    );
     if (!conversation) {
       conversation = await this.conversationModel.create({
         players: [sourcePlayer.id, targetPlayer.id],
       });
     }
-    console.log('conversation', conversation.players);
     if (message.proposal) {
       if (
         message.proposal.sourceHouses.some(
