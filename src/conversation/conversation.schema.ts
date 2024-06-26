@@ -15,10 +15,16 @@ export class Proposal {
 
   @Prop({ required: true })
   sourceMoney: number;
+
+  @Prop({ required: true })
+  status: 'pending' | 'accepted' | 'rejected';
 }
 
 @Schema()
 export class Message {
+  @Prop({ required: true, type: String })
+  id: string;
+
   @Prop({ required: true, type: String })
   content: string;
 
@@ -42,6 +48,9 @@ export class Conversation {
 
   @Prop({ required: false, default: undefined })
   lastMessage: Message;
+
+  @Prop({ required: true })
+  lobbyId: string;
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

@@ -52,7 +52,6 @@ export class ServerGateway
     private readonly serverService: ServerService,
     private readonly lobbyService: LobbyService,
     private readonly conversationService: ConversationService,
-    private readonly mapService: MapService,
     private readonly userService: UserService,
     private readonly schedulerService: SchedulerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
@@ -60,14 +59,14 @@ export class ServerGateway
   @WebSocketServer() server: Server;
 
   async afterInit(server: Server) {
-    const finishedLobbies = await this.lobbyService.findAllFinished();
-    finishedLobbies.forEach((lobby) => {
-      console.log('Schedule delete lobby', lobby.id);
-      this.schedulerService.scheduleDeleteLobby(lobby.id);
-    });
+    // const finishedLobbies = await this.lobbyService.findAllFinished();
+    // finishedLobbies.forEach((lobby) => {
+    //   console.log('Schedule delete lobby', lobby.id);
+    //   this.schedulerService.scheduleDeleteLobby(lobby.id);
+    // });
 
-    this.schedulerService.scheduleLobbies(server);
-    this.schedulerService.launchPublicLobbies();
+    // this.schedulerService.scheduleLobbies(server);
+    // this.schedulerService.launchPublicLobbies();
     console.warn('Comment this line to enable scheduler');
     console.log('Server initialized');
   }
@@ -787,6 +786,39 @@ export class ServerGateway
       );
       console.log('Conversations', conversations);
       socket.emit(GameEvent.GET_CONVERSATIONS, { conversations });
+    } catch (error) {
+      socket.emit(GameEvent.ERROR, { message: error.message });
+    }
+  }
+
+  @UseGuards(ServerGuard)
+  @SubscribeMessage(PlayerEvent.ANSWER_PROPOSAL)
+  async getMessages(
+    @ConnectedSocket() socket: ServerGuardSocket,
+    @MessageBody()
+    data: {
+      conversationId: string;
+      messageId: string;
+      lobbyId: string;
+      response: 'accepted' | 'rejected';
+    },
+  ) {
+    try {
+      const userId = socket.handshake.user.sub;
+      const player = await this.playerService.findOneByUserId(
+        userId,
+        data.lobbyId,
+      );
+      if (!player) {
+        throw new ForbiddenException('Player not found');
+      }
+      await this.conversationService.responseProposal(
+        data.conversationId,
+        data.messageId,
+        data.response,
+        player.id,
+        this.getServer(),
+      );
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });
     }

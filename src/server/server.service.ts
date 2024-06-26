@@ -75,12 +75,13 @@ export interface extendedCase extends Case {
 export class ServerService {
   constructor(
     private readonly playerService: PlayerService,
-    private readonly lobbyService: LobbyService,
     private readonly mapService: MapService,
     private readonly houseService: HouseService,
     private readonly userService: UserService,
     @Inject(forwardRef(() => ServerGateway))
     private readonly serverGateway: ServerGateway,
+    @Inject(forwardRef(() => LobbyService))
+    private readonly lobbyService: LobbyService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
 

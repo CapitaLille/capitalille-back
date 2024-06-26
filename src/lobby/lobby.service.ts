@@ -228,6 +228,7 @@ export class LobbyService {
       await this.playerService.deleteAllFromLobby(lobbyId);
       await this.houseService.destroyLobbyHouses(lobbyId);
       await this.playerService.deleteAllFromLobby(lobbyId);
+      // await this.conversationService.deleteFromLobby(lobbyId);
 
       await session.commitTransaction();
     } catch (error) {

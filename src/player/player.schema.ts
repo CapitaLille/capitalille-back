@@ -54,6 +54,7 @@ export enum PlayerEvent {
   REPAIR_HOUSE = 'repairHouse',
   SEND_MESSAGE = 'sendMessage',
   GET_CONVERSATIONS = 'getConversations',
+  ANSWER_PROPOSAL = 'answerProposal',
 }
 
 @Schema()
@@ -88,6 +89,7 @@ export enum moneyTransactionType {
   AUCTION = 'auction',
   HOUSE_TRANSACTION = 'house_transaction',
   MONUMENTS_PAY = 'monuments_pay',
+  TRADE = 'trade',
 }
 
 export enum ratingTransactionType {
