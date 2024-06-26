@@ -32,7 +32,6 @@ export class LobbyService {
   ) {}
 
   async createPrivate(createLobbyDto: CreateLobbyDto, ownerId: string) {
-    console.log(createLobbyDto);
     const session = await this.connection.startSession();
     let lobbyId = '';
     try {
@@ -224,7 +223,6 @@ export class LobbyService {
       if (!lobby || !lobby._id) {
         throw new NotFoundException('Lobby not found');
       }
-      console.log('delete lobby', lobbyId);
       await this.playerService.deleteAllFromLobby(lobbyId);
       await this.houseService.destroyLobbyHouses(lobbyId);
       await this.playerService.deleteAllFromLobby(lobbyId);

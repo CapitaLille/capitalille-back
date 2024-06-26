@@ -206,6 +206,23 @@ export class HouseService {
     return result;
   }
 
+  async findByIndexAndUpdate(
+    index: number,
+    lobbyId: string,
+    updateHouseDto: mongoose.UpdateQuery<House>,
+    socket: Server,
+  ) {
+    const result = await this.houseModel.findOneAndUpdate(
+      { index, lobby: lobbyId },
+      updateHouseDto,
+      { new: true },
+    );
+    if (socket) {
+      socket.in(result.lobby).emit(GameEvent.HOUSE_UPDATE, { house: result });
+    }
+    return result;
+  }
+
   async setHouseFailure(
     playerId: string,
     failure: 'fire' | 'water' | 'electricity',

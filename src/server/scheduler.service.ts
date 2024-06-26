@@ -96,7 +96,6 @@ export class SchedulerService {
     let turnTime = new Date(startTime.getTime());
     let i = 0;
     while (turnTime < now) {
-      console.log('turnTime', turnTime.toISOString(), turnSchedule);
       now = new Date();
       i++;
       turnTime = new Date(startTime.getTime() + i * turnSchedule * 1000);

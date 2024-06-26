@@ -775,7 +775,6 @@ export class ServerGateway
   ) {
     const userId = socket.handshake.user.sub;
     try {
-      console.log('Get conversations', data.lobbyId, userId);
       const player = await this.playerService.findOneByUserId(
         userId,
         data.lobbyId,
@@ -784,7 +783,6 @@ export class ServerGateway
       const conversations = await this.conversationService.findByPlayerId(
         player.id,
       );
-      console.log('Conversations', conversations);
       socket.emit(GameEvent.GET_CONVERSATIONS, { conversations });
     } catch (error) {
       socket.emit(GameEvent.ERROR, { message: error.message });

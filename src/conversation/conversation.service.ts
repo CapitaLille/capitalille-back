@@ -18,6 +18,7 @@ import { Player, moneyTransactionType } from 'src/player/player.schema';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
 import { ServerService } from 'src/server/server.service';
+import { HouseService } from 'src/house/house.service';
 
 @Injectable()
 export class ConversationService {
@@ -28,6 +29,7 @@ export class ConversationService {
     private serverService: ServerService,
     @Inject(forwardRef(() => PlayerService))
     private playerService: PlayerService,
+    private readonly houseService: HouseService,
   ) {}
 
   async findByPlayersId(ids: string[]) {
@@ -97,7 +99,6 @@ export class ConversationService {
       id: id,
     };
 
-    console.log('newMessage', newMessage);
     this.findByIdAndUpdate(
       conversation.id,
       {
@@ -150,25 +151,28 @@ export class ConversationService {
         throw new ForbiddenException('Cette proposition a déjà été traitée.');
       }
 
-      const targetPlayer = await this.playerService.findOneById(
+      const otherPlayerId =
         conversation.players[0] === playerId
           ? conversation.players[1]
-          : conversation.players[0],
+          : conversation.players[0];
+
+      const targetPlayer = await this.playerService.findOneById(
+        message.sender === playerId ? otherPlayerId : playerId,
       );
-      const sourcePlayer = await this.playerService.findOneById(playerId);
+      const sourcePlayer = await this.playerService.findOneById(
+        message.sender === playerId ? playerId : otherPlayerId,
+      );
       if (!sourcePlayer || !targetPlayer) {
         throw new NotFoundException('Player not found.');
       }
 
       if (response === 'accepted') {
-        if (proposal.sourceMoney > sourcePlayer.money) {
+        if (
+          proposal.sourceMoney > sourcePlayer.money ||
+          proposal.targetMoney > targetPlayer.money
+        ) {
           throw new ForbiddenException(
-            'Vous ne pouvez pas accepter une proposition qui vous mettrait en négatif.',
-          );
-        }
-        if (proposal.targetMoney > targetPlayer.money) {
-          throw new ForbiddenException(
-            "Vous ne pouvez pas accepter une proposition qui mettrait l'autre joueur en négatif.",
+            'Vous ne pouvez pas accepter une proposition qui mettrait à découvert un joueur.',
           );
         }
         if (
@@ -190,34 +194,45 @@ export class ConversationService {
           );
         }
 
-        // Perform the updates in separate operations
+        if (proposal.sourceMoney > 0) {
+          await this.serverService.playerMoneyTransaction(
+            proposal.sourceMoney,
+            sourcePlayer.id,
+            targetPlayer.id,
+            moneyTransactionType.TRADE,
+            {
+              createTransactionDocument: true,
+              forceTransaction: false,
+            },
+          );
+        } else if (proposal.targetMoney > 0) {
+          await this.serverService.playerMoneyTransaction(
+            proposal.targetMoney,
+            targetPlayer.id,
+            sourcePlayer.id,
+            moneyTransactionType.TRADE,
+            {
+              createTransactionDocument: true,
+              forceTransaction: false,
+            },
+          );
+        }
+
+        for (const houseId of proposal.sourceHouses) {
+          await this.houseService.findByIndexAndUpdate(
+            houseId,
+            conversation.lobbyId,
+            { owner: targetPlayer.id },
+            server,
+          );
+        }
         await this.playerService.findByIdAndUpdate(
           sourcePlayer.id,
           {
-            $inc: {
-              money: proposal.sourceMoney - proposal.targetMoney,
-            },
             $pull: { houses: { $in: proposal.sourceHouses } },
           },
           server,
         );
-        if (proposal.sourceMoney - proposal.targetMoney < 0) {
-          await this.playerService.generateTransaction(
-            sourcePlayer.id,
-            targetPlayer.id,
-            proposal.sourceMoney - proposal.targetMoney,
-            moneyTransactionType.TRADE,
-            server,
-          );
-        } else if (proposal.sourceMoney - proposal.targetMoney > 0) {
-          await this.playerService.generateTransaction(
-            targetPlayer.id,
-            sourcePlayer.id,
-            proposal.targetMoney - proposal.sourceMoney,
-            moneyTransactionType.TRADE,
-            server,
-          );
-        }
         await this.playerService.findByIdAndUpdate(
           sourcePlayer.id,
           {
@@ -225,12 +240,18 @@ export class ConversationService {
           },
           server,
         );
+
+        for (const houseId of proposal.targetHouses) {
+          await this.houseService.findByIndexAndUpdate(
+            houseId,
+            conversation.lobbyId,
+            { owner: sourcePlayer.id },
+            server,
+          );
+        }
         await this.playerService.findByIdAndUpdate(
           message.sender,
           {
-            $inc: {
-              money: proposal.targetMoney - proposal.sourceMoney,
-            },
             $pull: { houses: { $in: proposal.targetHouses } },
           },
           server,
