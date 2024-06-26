@@ -289,6 +289,15 @@ export class SchedulerService {
               AchievementType.auctionWinner,
             ),
           );
+          promises.push(
+            this.playerService.findByIdAndUpdate(
+              nextOwner,
+              {
+                $push: { houses: house.index },
+              },
+              this.serverGateway.getServer(),
+            ),
+          );
         }
         promises.push(
           await this.serverService.playerMoneyTransaction(
@@ -332,15 +341,7 @@ export class SchedulerService {
             this.serverGateway.getServer(),
           ),
         );
-        promises.push(
-          this.playerService.findByIdAndUpdate(
-            nextOwner,
-            {
-              $push: { houses: house.index },
-            },
-            this.serverGateway.getServer(),
-          ),
-        );
+
         await Promise.all(promises);
       }
       if (house.state === houseState.FREE && house.nextOwner !== '') {
