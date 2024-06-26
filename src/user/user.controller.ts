@@ -75,18 +75,17 @@ export class UserController {
   async findMultiple(@Body() data: { ids: string[] }) {
     return await this.userService.findMultiple(data.ids);
   }
-
+  @Get('history')
+  @UseGuards(AuthGuard)
+  async findHistory(@Request() req) {
+    console.log('history');
+    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
+    return await this.historyService.findFromUser(req.user.data.sub);
+  }
   @Get(':id')
   @UseGuards(AuthGuard)
   async findOneById(@Param('id') id: string) {
     return await this.userService.findOne(id);
-  }
-
-  @Get('/history')
-  @UseGuards(AuthGuard)
-  async findHistory(@Request() req) {
-    if (!req.user.data.sub) throw new BadRequestException('No UID provided');
-    return await this.historyService.findFromUser(req.user.data.sub);
   }
 
   @Patch('')
