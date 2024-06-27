@@ -121,6 +121,17 @@ export class HouseService {
     return houses;
   }
 
+  async findAllFromPlayer(playerId: string, lobbyId: string) {
+    const houses = await this.houseModel.find({
+      owner: playerId,
+      lobby: lobbyId,
+    });
+    if (!houses) {
+      return undefined;
+    }
+    return houses;
+  }
+
   /**
    * Get the auction price of a house based on the map configuration.
    * @param map

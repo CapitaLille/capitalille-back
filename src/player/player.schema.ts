@@ -9,8 +9,8 @@ export class Player {
   user: string;
   @Prop({ required: true })
   lobby: string;
-  @Prop({ required: false, default: [] })
-  houses: number[];
+  // @Prop({ required: false, default: [] })
+  // houses: number[];
   @Prop({ required: false, default: 0 })
   money: number;
   @Prop({ required: false, default: 2.5, min: 0, max: 5 })

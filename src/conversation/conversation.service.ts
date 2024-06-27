@@ -65,22 +65,40 @@ export class ConversationService {
         });
       }
       if (message.proposal) {
+        const sourceHouses = await this.houseService.findAllFromPlayer(
+          sourcePlayer.id,
+          lobby.id,
+        );
         if (
           message.proposal.sourceHouses.some(
-            (house) => !sourcePlayer.houses.includes(house),
+            (house) => !sourceHouses.find((h) => h.index === house),
           )
         ) {
+          const sourceHousesIndex = sourceHouses.map((h) => h.index);
           throw new ForbiddenException(
-            'Vous ne pouvez inclure des maisons que vous ne possédez pas dans votre proposition.',
+            'Vous ne pouvez inclure des maisons que vous ne possédez pas dans votre proposition.' +
+              ' ' +
+              message.proposal.sourceHouses +
+              ' | ' +
+              sourceHousesIndex,
           );
         }
+        const targetHouses = await this.houseService.findAllFromPlayer(
+          targetPlayer.id,
+          lobby.id,
+        );
         if (
           message.proposal.targetHouses.some(
-            (house) => !targetPlayer.houses.includes(house),
+            (house) => !targetHouses.find((h) => h.index === house),
           )
         ) {
+          const targetHousesIndex = targetHouses.map((h) => h.index);
           throw new ForbiddenException(
-            "Vous ne pouvez inclure des maisons que l'autre joueur ne possède pas dans votre proposition.",
+            "Vous ne pouvez inclure des maisons que l'autre joueur ne possède pas dans votre proposition." +
+              ' ' +
+              message.proposal.targetHouses +
+              ' | ' +
+              targetHousesIndex,
           );
         }
         if (message.proposal.sourceMoney > sourcePlayer.money) {
@@ -106,6 +124,11 @@ export class ConversationService {
       };
 
       await socket.to(sourcePlayerSocketId).emit(GameEvent.MESSAGE_SENT, {
+        localMessageId: tmpLocalId,
+        newMessageId: id,
+        conversationId: conversation.id,
+      });
+      await socket.to(targetPlayerSocketId).emit(GameEvent.MESSAGE_SENT, {
         localMessageId: tmpLocalId,
         newMessageId: id,
         conversationId: conversation.id,
@@ -194,18 +217,26 @@ export class ConversationService {
             'Vous ne pouvez pas accepter une proposition qui mettrait à découvert un joueur.',
           );
         }
+        const sourceHouses = await this.houseService.findAllFromPlayer(
+          sourcePlayer.id,
+          conversation.lobbyId,
+        );
         if (
           proposal.sourceHouses.some(
-            (house) => !sourcePlayer.houses.includes(house),
+            (house) => !sourceHouses.find((h) => h.index === house),
           )
         ) {
           throw new ForbiddenException(
             'Vous ne pouvez pas accepter une proposition qui inclut des maisons que vous ne possédez pas.',
           );
         }
+        const targetHouses = await this.houseService.findAllFromPlayer(
+          targetPlayer.id,
+          conversation.lobbyId,
+        );
         if (
           proposal.targetHouses.some(
-            (house) => !targetPlayer.houses.includes(house),
+            (house) => !targetHouses.find((h) => h.index === house),
           )
         ) {
           throw new ForbiddenException(
