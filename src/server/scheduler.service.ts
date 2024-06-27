@@ -431,6 +431,39 @@ export class SchedulerService {
       }
     }
 
+    // Checking house ownership.
+    const newHouses = await this.houseService.findAllFromLobby(lobby.id);
+    const newPlayers = await this.playerService.findAllFromLobby(lobby.id);
+    for (const house of newHouses) {
+      if (house.owner === '') {
+        return;
+      }
+      // find all players that have this house
+      const owner = newPlayers.find((e) => e.id === house.owner);
+      const players = newPlayers.filter((e) => e.houses.includes(house.index));
+      for (const player of players) {
+        if (house.owner !== player.id) {
+          // Remove house from player
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              $pull: { houses: house.index },
+            },
+            this.serverGateway.getServer(),
+          );
+        }
+      }
+      if (owner !== undefined && !owner.houses.includes(house.index)) {
+        await this.playerService.findByIdAndUpdate(
+          owner.id,
+          {
+            $push: { houses: house.index },
+          },
+          this.serverGateway.getServer(),
+        );
+      }
+    }
+
     let newLobby = await this.lobbyService.findOne(lobby.id);
     if (lobby.turnCount > 0) {
       const turnCount = lobby.turnCount - 1 < 0 ? 0 : lobby.turnCount - 1;
