@@ -34,6 +34,8 @@ export enum GameEvent {
   COPS_REQUEST = 'copsRequest', // Request to pay the cops or pass.
   SCHOOL_REQUEST = 'schoolRequest', // Request to pay the school or pass.
   NEW_MESSAGE = 'newMessage',
+  MESSAGE_SENT = 'messageSent',
+  MESSAGE_ERROR = 'messageError',
   GET_CONVERSATIONS = 'getConversations',
 }
 

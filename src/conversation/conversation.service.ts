@@ -46,69 +46,88 @@ export class ConversationService {
     message: Message,
     socket: Server,
   ) {
-    if (targetPlayer.lobby !== lobby.id) {
-      return;
-    }
-    let conversation = await this.findByPlayersId([
-      sourcePlayer.id,
-      targetPlayer.id,
-    ]);
-    if (!conversation) {
-      conversation = await this.conversationModel.create({
-        players: [sourcePlayer.id, targetPlayer.id],
-        lobbyId: lobby.id,
+    const tmpLocalId = message.id;
+    let conversationId = '';
+
+    try {
+      let conversation = await this.findByPlayersId([
+        sourcePlayer.id,
+        targetPlayer.id,
+      ]);
+      conversationId = conversation.id;
+      if (targetPlayer.lobby !== lobby.id) {
+        return;
+      }
+      if (!conversation) {
+        conversation = await this.conversationModel.create({
+          players: [sourcePlayer.id, targetPlayer.id],
+          lobbyId: lobby.id,
+        });
+      }
+      if (message.proposal) {
+        if (
+          message.proposal.sourceHouses.some(
+            (house) => !sourcePlayer.houses.includes(house),
+          )
+        ) {
+          throw new ForbiddenException(
+            'Vous ne pouvez inclure des maisons que vous ne possédez pas dans votre proposition.',
+          );
+        }
+        if (
+          message.proposal.targetHouses.some(
+            (house) => !targetPlayer.houses.includes(house),
+          )
+        ) {
+          throw new ForbiddenException(
+            "Vous ne pouvez inclure des maisons que l'autre joueur ne possède pas dans votre proposition.",
+          );
+        }
+        if (message.proposal.sourceMoney > sourcePlayer.money) {
+          throw new ForbiddenException(
+            "Vous ne pouvez proposer plus d'argent que ce que vous avez.",
+          );
+        }
+      }
+      if (!message.content && !message.proposal) {
+        throw new ForbiddenException(
+          'Vous devez envoyer un message ou une offre.',
+        );
+      }
+      const tmpLocalId = message.id;
+
+      const id = await nanoid(20);
+      const newMessage: Message = {
+        content: message.content,
+        proposal: message.proposal,
+        sender: sourcePlayer.id,
+        time: new Date(),
+        id: id,
+      };
+
+      await socket.to(sourcePlayerSocketId).emit(GameEvent.MESSAGE_SENT, {
+        localMessageId: tmpLocalId,
+        newMessageId: id,
+        conversationId: conversation.id,
       });
-    }
-    if (message.proposal) {
-      if (
-        message.proposal.sourceHouses.some(
-          (house) => !sourcePlayer.houses.includes(house),
-        )
-      ) {
-        throw new ForbiddenException(
-          'Vous ne pouvez inclure des maisons que vous ne possédez pas dans votre proposition.',
-        );
-      }
-      if (
-        message.proposal.targetHouses.some(
-          (house) => !targetPlayer.houses.includes(house),
-        )
-      ) {
-        throw new ForbiddenException(
-          "Vous ne pouvez inclure des maisons que l'autre joueur ne possède pas dans votre proposition.",
-        );
-      }
-      if (message.proposal.sourceMoney > sourcePlayer.money) {
-        throw new ForbiddenException(
-          "Vous ne pouvez proposer plus d'argent que ce que vous avez.",
-        );
-      }
-    }
-    if (!message.content && !message.proposal) {
-      throw new ForbiddenException(
-        'Vous devez envoyer un message ou une offre.',
+
+      this.findByIdAndUpdate(
+        conversation.id,
+        {
+          $push: { messages: newMessage },
+          lastMessage: newMessage,
+        },
+        socket,
+        sourcePlayerSocketId,
+        targetPlayerSocketId,
       );
+    } catch (error) {
+      await socket.to(sourcePlayerSocketId).emit(GameEvent.MESSAGE_ERROR, {
+        localMessageId: tmpLocalId,
+        conversationId: conversationId,
+      });
+      throw new ForbiddenException(error.message);
     }
-
-    const id = await nanoid(20);
-    const newMessage: Message = {
-      content: message.content,
-      proposal: message.proposal,
-      sender: sourcePlayer.id,
-      time: new Date(),
-      id: id,
-    };
-
-    this.findByIdAndUpdate(
-      conversation.id,
-      {
-        $push: { messages: newMessage },
-        lastMessage: newMessage,
-      },
-      socket,
-      sourcePlayerSocketId,
-      targetPlayerSocketId,
-    );
   }
 
   async responseProposal(
