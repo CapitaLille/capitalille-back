@@ -570,6 +570,33 @@ export class ServerService {
           await this.playerService.findByIdAndUpdate(
             player.id,
             {
+              $push: { bonuses: playerVaultType.diceDouble },
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.DICE_DIVIDED_BY_2:
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              $push: { bonuses: playerVaultType.diceDividedBy2 },
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.DICE_MINUS_2:
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
+              $push: { bonuses: playerVaultType.diceMinus2 },
+            },
+            this.serverGateway.getServer(),
+          );
+          break;
+        case CaseEventType.DICE_PLUS_2:
+          await this.playerService.findByIdAndUpdate(
+            player.id,
+            {
               $push: { bonuses: playerVaultType.dicePlus2 },
             },
             this.serverGateway.getServer(),
@@ -953,12 +980,13 @@ export class ServerService {
       player.user,
       AchievementType.monumentsRestorer,
     );
-    const MetroInfo: InfoSocket = {
+    const MonumentInfo: InfoSocket = {
       icon: build,
       message: 'Vous avez gagné ' + monument.bonus + ' points de réputation.',
       title: 'Monument restauré',
     };
-    socket.emit(GameEvent.INFO, MetroInfo);
+    console.log('Emit monument info');
+    socket.emit(GameEvent.INFO, MonumentInfo);
   }
 
   async houseRent(

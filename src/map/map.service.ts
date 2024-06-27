@@ -1497,19 +1497,20 @@ export class MapService {
 
     const houses = [];
     for (let i = 0; i < map.houses.length; i++) {
-      const priceIndex = Math.floor(Math.random() * i);
+      const index = i + 1;
+      const priceIndex = Math.floor(Math.random() * index);
       const house = {
         objectName: map.houses[i].objectName,
         coordinates: map.houses[i].coordinates,
         cases: map.houses[i].cases,
         name: names[i],
         price: [
-          100000 * i,
-          100000 * i + 100000,
-          100000 * i + 200000,
-          100000 * i + 300000,
+          100000 * index,
+          100000 * index + 100000,
+          100000 * index + 200000,
+          100000 * index + 300000,
         ],
-        rent: [25000 * i, 50000 * i, 75000 * i, 100000 * i],
+        rent: [25000 * index, 50000 * index, 75000 * index, 100000 * index],
       };
       houses.push(house);
     }
@@ -1522,8 +1523,8 @@ export class MapService {
         coordinates: map.monuments[i].coordinates,
         cases: map.monuments[i].cases,
         name: map.monuments[i].name,
-        price: 100000 * i,
-        bonus: 0.2 * i,
+        price: 100000 * (i + 1),
+        bonus: 0.2 * (i + 1),
       });
     }
 
@@ -1532,15 +1533,15 @@ export class MapService {
       houses: houses,
       monuments: monuments,
       configuration: {
-        name: 'Vieux Lille 2',
-        description: 'Vieux Lille 2',
-        salary: 20000,
+        name: 'Vieux Lille',
+        description: 'Une configuration équilibrée',
+        salary: 50000,
         ratingMultiplicator: [0.5, 1.5],
-        bank: { tax: 10, value: 2000000 },
-        maxPlayer: 6,
-        minPlayer: 2,
+        bank: { tax: 10, value: 5000000 },
+        maxPlayer: 10,
+        minPlayer: 4,
         starting: {
-          money: 2000000,
+          money: 4000000,
           rating: 2.5,
         },
         defectRate: {
@@ -1548,15 +1549,15 @@ export class MapService {
           water: 0.1,
           electricity: 0.1,
         },
-        repairCost: 100000,
-        casino: { value: 100000, chance: 0.5 },
+        repairCost: 500000,
+        casino: { value: 500000, chance: 0.5 },
         copsMalus: 2,
-        school: { cost: 100000, bonus: 50000 },
+        school: { cost: 500000, bonus: 25000 },
         price: 10,
-        playerRange: 2,
+        playerRange: 3,
         metroPrice: 100000,
-        busPrice: 50000,
-        fraudChance: 0.5,
+        busPrice: 10000,
+        fraudChance: 0.2,
         auctionStepPourcent: 0.15,
       },
     });

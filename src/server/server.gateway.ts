@@ -29,6 +29,7 @@ import { hammer } from 'src/ion-icon';
 import { ANSWER } from './server.response';
 import { Message } from 'src/conversation/conversation.schema';
 import { ConversationService } from 'src/conversation/conversation.service';
+import { JwtService } from '@nestjs/jwt';
 
 // Étendre le type Handshake de socket.io avec une propriété user
 type HandshakeWithUser = Socket['handshake'] & {
@@ -53,28 +54,54 @@ export class ServerGateway
     private readonly lobbyService: LobbyService,
     private readonly conversationService: ConversationService,
     private readonly userService: UserService,
+    private readonly jwtService: JwtService,
     private readonly schedulerService: SchedulerService,
     @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
   @WebSocketServer() server: Server;
 
   async afterInit(server: Server) {
-    const finishedLobbies = await this.lobbyService.findAllFinished();
-    finishedLobbies.forEach((lobby) => {
-      console.log('Schedule delete lobby', lobby.id);
-      this.schedulerService.scheduleDeleteLobby(lobby.id);
-    });
+    // const finishedLobbies = await this.lobbyService.findAllFinished();
+    // finishedLobbies.forEach((lobby) => {
+    //   console.log('Schedule delete lobby', lobby.id);
+    //   this.schedulerService.scheduleDeleteLobby(lobby.id);
+    // });
 
-    this.schedulerService.scheduleLobbies(server);
-    this.schedulerService.launchPublicLobbies();
+    // this.schedulerService.scheduleLobbies(server);
+    // this.schedulerService.launchPublicLobbies();
     console.warn('Comment this line to enable scheduler');
     console.log('Server initialized');
   }
 
-  handleConnection(client: any, ...args: any[]) {}
+  // handleConnection(client: any, ...args: any[]) {
+  //   //
+  //   this.serverService.setSocketId(undefined, client.id);
+  // }
+
+  @UseGuards(ServerGuard)
+  handleConnection(client: any, ...args: any[]) {
+    console.log('Connection', client.id);
+    // if (client.handshake.user) {
+    //   const userId = client.handshake;
+    //   try {
+    //     const payload: authPayload = (
+    //       await this.jwt.verifyAsync(bearerToken, {
+    //         secret: this.constantsService.jwtConstants.secret,
+    //       })
+    //     ).data;
+    //     console.log(context);
+    //     context.args[0].handshake.user = payload;
+    //     return true;
+    //   } catch (ex) {
+    //     console.log('Unauthorized access to the server socket');
+    //     return false;
+    //   }
+    // }
+  }
 
   handleDisconnect(client: any) {
     this.serverService.removeSocketId(undefined, client.id);
+    console.log('Disconnect', client.id);
   }
 
   @SubscribeMessage(PlayerEvent.SUBSCRIBE)
@@ -96,25 +123,20 @@ export class ServerGateway
         data.code,
       );
     }
+    const userId = socket.handshake.user.sub;
     this.serverService.setSocketId(player.id, socket.id);
     socket.join(data.lobbyId);
-    const userId = socket.handshake.user.sub;
     try {
       await this.serverService.gameSession(
         data.lobbyId,
         userId,
         socket,
         async (lobby, player, map) => {
-          console.log('Game session', lobby.id, socket.id);
           const players = await this.playerService.findAllFromLobby(lobby.id);
-          console.log('Players', players.length);
           const houses = await this.houseService.findAllFromLobby(lobby.id);
-          console.log('Houses', houses.length);
           const users = await this.userService.findByIds(lobby.users);
-          console.log('Users', users.length);
           const delay = await this.schedulerService.getDelay(lobby.id);
           socket.emit(GameEvent.NEXT_TURN, { delay });
-          console.log('Emit subscribe', lobby.id, socket.id);
           socket.emit(GameEvent.SUBSCRIBE, {
             lobby,
             houses,

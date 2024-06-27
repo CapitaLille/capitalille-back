@@ -75,6 +75,7 @@ export class UserController {
   async findMultiple(@Body() data: { ids: string[] }) {
     return await this.userService.findMultiple(data.ids);
   }
+
   @Get('history')
   @UseGuards(AuthGuard)
   async findHistory(@Request() req) {

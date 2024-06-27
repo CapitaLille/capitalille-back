@@ -65,6 +65,9 @@ export enum CaseType {
 
 export enum CaseEventType {
   DICE_DOUBLE = 'dice_double',
+  DICE_DIVIDED_BY_2 = 'dice_divided_by_2',
+  DICE_PLUS_2 = 'dice_plus_2',
+  DICE_MINUS_2 = 'dice_minus_2',
   ELECTRICITY_FAILURE = 'electricity_failure',
   WATER_FAILURE = 'water_failure',
   FIRE_FAILURE = 'fire_failure',
@@ -73,12 +76,18 @@ export enum CaseEventType {
 }
 
 export const CaseEvent = [
-  { code: CaseEventType.DICE_DOUBLE, dropRate: 0.2 },
+  { code: CaseEventType.DICE_DOUBLE, dropRate: 0.1 },
   { code: CaseEventType.ELECTRICITY_FAILURE, dropRate: 0.1 },
+  {
+    code: CaseEventType.DICE_PLUS_2,
+    dropRate: 0.1,
+  },
+  { code: CaseEventType.DICE_DIVIDED_BY_2, dropRate: 0.1 },
+  { code: CaseEventType.DICE_MINUS_2, dropRate: 0.1 },
   { code: CaseEventType.WATER_FAILURE, dropRate: 0.1 },
   { code: CaseEventType.FIRE_FAILURE, dropRate: 0.1 },
-  { code: CaseEventType.RENT_DISCOUNT, dropRate: 0.2 },
-  { code: CaseEventType.CASINO, dropRate: 0.3 },
+  { code: CaseEventType.RENT_DISCOUNT, dropRate: 0.1 },
+  { code: CaseEventType.CASINO, dropRate: 0.2 },
 ];
 
 export const CaseConfigSchema = SchemaFactory.createForClass(Case);
