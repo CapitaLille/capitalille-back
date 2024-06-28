@@ -46,7 +46,7 @@ export class ConversationService {
     message: Message,
     socket: Server,
   ) {
-    const tmpLocalId = message.id;
+    const tmpLocalId = message?.id;
     let conversationId = '';
 
     try {
@@ -54,7 +54,7 @@ export class ConversationService {
         sourcePlayer.id,
         targetPlayer.id,
       ]);
-      conversationId = conversation.id;
+      conversationId = conversation?.id;
       if (targetPlayer.lobby !== lobby.id) {
         return;
       }
@@ -126,16 +126,18 @@ export class ConversationService {
       await socket.to(sourcePlayerSocketId).emit(GameEvent.MESSAGE_SENT, {
         localMessageId: tmpLocalId,
         newMessageId: id,
-        conversationId: conversation.id,
+        targetId: targetPlayer.id,
+        conversationId: conversation?.id,
       });
       await socket.to(targetPlayerSocketId).emit(GameEvent.MESSAGE_SENT, {
         localMessageId: tmpLocalId,
         newMessageId: id,
-        conversationId: conversation.id,
+        targetId: sourcePlayer.id,
+        conversationId: conversation?.id,
       });
 
       this.findByIdAndUpdate(
-        conversation.id,
+        conversation?.id,
         {
           $push: { messages: newMessage },
           lastMessage: newMessage,
@@ -145,6 +147,7 @@ export class ConversationService {
         targetPlayerSocketId,
       );
     } catch (error) {
+      console.log(error);
       await socket.to(sourcePlayerSocketId).emit(GameEvent.MESSAGE_ERROR, {
         localMessageId: tmpLocalId,
         conversationId: conversationId,
