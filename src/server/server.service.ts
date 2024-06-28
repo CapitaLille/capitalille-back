@@ -574,7 +574,7 @@ export class ServerService {
             },
             this.serverGateway.getServer(),
           );
-          break;
+          return CaseEventType.DICE_DOUBLE;
         case CaseEventType.DICE_DIVIDED_BY_2:
           await this.playerService.findByIdAndUpdate(
             player.id,
@@ -583,7 +583,7 @@ export class ServerService {
             },
             this.serverGateway.getServer(),
           );
-          break;
+          return CaseEventType.DICE_DOUBLE;
         case CaseEventType.DICE_MINUS_2:
           await this.playerService.findByIdAndUpdate(
             player.id,
@@ -592,6 +592,7 @@ export class ServerService {
             },
             this.serverGateway.getServer(),
           );
+          return CaseEventType.DICE_DOUBLE;
           break;
         case CaseEventType.DICE_PLUS_2:
           await this.playerService.findByIdAndUpdate(
@@ -601,7 +602,7 @@ export class ServerService {
             },
             this.serverGateway.getServer(),
           );
-          break;
+          return CaseEventType.DICE_DOUBLE;
         case CaseEventType.ELECTRICITY_FAILURE:
           await this.houseService.setHouseFailure(
             player.id,
